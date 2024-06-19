@@ -2,59 +2,6 @@ import numpy as np
 import os
 
 
-class RKW:
-    def __init__(self, damping, safe_add):
-        self.damping = damping
-        self.even_s = False
-        self.safe_add = safe_add
-
-        paths = os.environ["PYTHONPATH"].split(os.pathsep)
-        coeff = None
-        for path in paths:
-            coeff_file = path + "/pySDC/projects/Monodomain/explicit_stabilized_classes/coeff_P.csv"
-            if os.path.exists(coeff_file):
-                coeff = np.loadtxt(coeff_file, delimiter=",", dtype=float, skiprows=1)
-
-        if coeff is None:
-            raise Exception("Coefficients file for RKW1 not found.")
-
-        self.s_max = np.max(coeff[:, 0].astype(int))
-        self.muP = coeff[:, 1]
-        self.nuP = coeff[:, 2]
-        self.kappaP = coeff[:, 3]
-        self.dP = coeff[:, 4]
-
-    def update_coefficients(self, s):
-        self.s = s
-        self.mu = self.muP[:s] / self.dP[s - 1]
-        self.nu = self.nuP[:s] + self.muP[:s]
-        self.kappa = self.kappaP[:s]
-        self.nu[0] = s * self.mu[0] / 2.0
-        self.kappa[0] = s * self.mu[0]
-        self.c = self.dP[:s] / self.dP[s - 1]
-
-    def get_s(self, z):
-        if 2.0 * self.dP[-1] <= z:
-            raise NotImplementedError(
-                "Need too many stages and coefficients are not provided. Try to decrease step size."
-            )
-        # if z<1.5:
-        #     s = 1
-        if z < 2.0:
-            s = 1 + self.safe_add
-        else:
-            s = 1 + np.argmax(2 * self.dP > z) + self.safe_add
-            if s > self.s_max:
-                raise Exception("adding safe_add will require too many stages and coefficients are not provided")
-        return s
-
-    def stability_boundary(self, s):
-        if s == 1:
-            return 2.0
-        else:
-            return 2.0 * self.dP[s - 1]
-
-
 class RKC:
     def __init__(self, damping, safe_add):
         self.damping = damping
@@ -217,6 +164,56 @@ class RKU:
         w1 = np.polynomial.chebyshev.chebval(w0, c) / np.polynomial.chebyshev.chebval(w0, dc)
 
         return 2.0 * w0 / w1
+
+
+class RKW:
+    def __init__(self, damping, safe_add):
+        self.damping = damping
+        self.even_s = False
+        self.safe_add = safe_add
+
+        executed_file_dir = os.path.dirname(os.path.realpath(__file__))
+        coeff_file = executed_file_dir + "/coeff_P.csv"
+        if os.path.exists(coeff_file):
+            coeff = np.loadtxt(coeff_file, delimiter=",", dtype=float, skiprows=1)
+        else:
+            raise Exception("Coefficients file for RKW not found.")
+
+        self.s_max = np.max(coeff[:, 0].astype(int))
+        self.muP = coeff[:, 1]
+        self.nuP = coeff[:, 2]
+        self.kappaP = coeff[:, 3]
+        self.dP = coeff[:, 4]
+
+    def update_coefficients(self, s):
+        self.s = s
+        self.mu = self.muP[:s] / self.dP[s - 1]
+        self.nu = self.nuP[:s] + self.muP[:s]
+        self.kappa = self.kappaP[:s]
+        self.nu[0] = s * self.mu[0] / 2.0
+        self.kappa[0] = s * self.mu[0]
+        self.c = self.dP[:s] / self.dP[s - 1]
+
+    def get_s(self, z):
+        if 2.0 * self.dP[-1] <= z:
+            raise NotImplementedError(
+                "Need too many stages and coefficients are not provided. Try to decrease step size."
+            )
+        # if z<1.5:
+        #     s = 1
+        if z < 2.0:
+            s = 1 + self.safe_add
+        else:
+            s = 1 + np.argmax(2 * self.dP > z) + self.safe_add
+            if s > self.s_max:
+                raise Exception("adding safe_add will require too many stages and coefficients are not provided")
+        return s
+
+    def stability_boundary(self, s):
+        if s == 1:
+            return 2.0
+        else:
+            return 2.0 * self.dP[s - 1]
 
 
 class HSRKU:

@@ -115,14 +115,16 @@ class multirate_explicit_stabilized(explicit_stabilized):
         if "ES_s_outer" in params:
             self.s_fixed[0] = params["ES_s_outer"]
             # notice that that to fix s_inner then also s_outer must be fixed
-            if "ES_s_inner" in params:
-                self.s_fixed[1] = params["ES_s_inner"]
+            if "ES_m_inner" in params:
+                self.s_fixed[1] = params["ES_m_inner"]
+
         if hasattr(self.P, "rho_nonstiff") and callable(self.P.rho_nonstiff):
             self.rho_expl = self.P.rho_nonstiff
         else:
             if not hasattr(self, "rho_estimator"):
                 self.rho_estimator = rho_estimator(self.P)
             self.rho_expl = self.rho_estimator.rho_expl
+
         if hasattr(self.P, "rho_stiff") and callable(self.P.rho_stiff):
             self.rho_impl = self.P.rho_stiff
         else:
@@ -423,8 +425,8 @@ class exponential_splitting_explicit_stabilized(explicit_stabilized):
         self.s_fixed = [0, 0]
         if "ES_s_outer" in params:
             self.s_fixed[0] = params["ES_s_outer"]
-        if "ES_s_inner" in params:
-            self.s_fixed[1] = params["ES_s_inner"]
+        if "ES_m_inner" in params:
+            self.s_fixed[1] = params["ES_m_inner"]
 
         self.rho = [None, None]
         if hasattr(self.P, "rho_nonstiff") and callable(self.P.rho_nonstiff):

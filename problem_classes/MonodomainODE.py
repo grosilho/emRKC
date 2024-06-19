@@ -98,7 +98,7 @@ class MonodomainODE:
         if read_ok:
             error_L2, rel_error_L2 = self.parabolic.compute_errors(uh[0], ref_sol_V)
 
-            if self.comm.rank == 0:
+            if not hasattr(self.parabolic, "comm") or self.parabolic.rank == 0:
                 print(f"L2-errors: {error_L2}")
                 print(f"Relative L2-errors: {rel_error_L2}")
 

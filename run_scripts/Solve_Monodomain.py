@@ -1,36 +1,36 @@
+import logging
+import argparse
+import os
+from pathlib import Path
+
+import sys
+
+sys.path.insert(0, '..')
+
+from utils.data_management import database
+
 from problem_classes.MonodomainODE import MonodomainODE, MultiscaleMonodomainODE
 
+from integrators.TimeIntegrator import TimeIntegrator
+from integrators.standard import explicit_Euler, exponential_explicit_implicit_Euler
 from integrators.ExplicitStabilized import (
     explicit_stabilized,
     multirate_explicit_stabilized,
-)
-from integrators.ExplicitStabilized import (
     exponential_multirate_explicit_stabilized,
     exponential_multirate_explicit_stabilized_progress,
 )
 
-from integrators.standard import explicit_Euler, exponential_explicit_implicit_Euler
-from integrators.TimeIntegrator import TimeIntegrator
-
-
-import logging
-from utils.data_management import database
-import argparse
-from pathlib import Path
-import os
-from mpi4py import MPI
-
 
 def get_default_problem_params():
     problem_params = dict()
-    problem_params["space_disc"] = "FD"
+    problem_params["space_disc"] = "DCT"
     problem_params["order"] = 2
     problem_params["mass_lumping"] = True  # has effect only for space_disc = FEM with order = 1
     problem_params["pre_refinements"] = 0
     problem_params["post_refinements"] = 0
     problem_params["fibrosis"] = False
     executed_file_dir = os.path.dirname(os.path.realpath(__file__))
-    problem_params["meshes_fibers_root_folder"] = executed_file_dir + "/meshes_fibers_fibrosis/results"
+    problem_params["meshes_fibers_root_folder"] = executed_file_dir + "/../meshes_fibers_fibrosis/results"
     problem_params["domain_name"] = "cuboid_2D_small"
     problem_params["init_time"] = 0.0
     problem_params["end_time"] = -1.0
@@ -42,7 +42,7 @@ def get_default_problem_params():
     problem_params["init_val_name"] = "init_val"
     problem_params["enable_output"] = False
     problem_params["output_V_only"] = True
-    problem_params["output_root"] = executed_file_dir + "/results/"
+    problem_params["output_root"] = executed_file_dir + "results/"
     problem_params["output_file_name"] = "monodomain"
     problem_params["ref_sol"] = "none"
 
@@ -61,7 +61,7 @@ def get_default_integrator_params():
     int_params["safe_add"] = 0
     int_params["ES_class"] = "RKC"
     int_params["ES_s_outer"] = 0
-    int_params["ES_s_inner"] = 0
+    int_params["ES_m_inner"] = 0
 
     return int_params
 
@@ -71,7 +71,7 @@ def get_problem_and_stepper(problem_params, int_params):
         problem = MonodomainODE(**problem_params)
         EE = explicit_Euler(int_params, problem)
         stepper = EE
-    elif int_params["integrator"] == "IMEXEXP":
+    elif int_params["integrator"] == "IMEX-RL":
         problem_params["splitting"] = "fast_slow_exponential"
         problem = MultiscaleMonodomainODE(**problem_params)
         IMEXEXP = exponential_explicit_implicit_Euler(int_params, problem)
@@ -118,7 +118,9 @@ def main():
         "--integrator",
         default="emES",
         type=str,
-        help="The integration scheme: IMEX-RL, EE, ES, mES, emES. IMEX-RL is the IMEX Rush-Larsen method, EE the Explicit Euler and ES stands for Explicit Stabilized. The class of ES method (e.g. RKC) is defined by the ES_class parameter. mES stands for multirate Explicit Stabilized. emES stands for exponential multirate Explicit Stabilized.",
+        help="The integration scheme: IMEX-RL, EE, ES, mES, emES. IMEX-RL is the IMEX Rush-Larsen method,\
+              EE the Explicit Euler and ES stands for Explicit Stabilized. The class of ES method (e.g. RKC)\
+              is defined by the ES_class parameter. mES stands for multirate Explicit Stabilized. emES stands for exponential multirate Explicit Stabilized.",
     )
     parser.add_argument("--dt", default=0.1, type=float, help="The step size.")
     parser.add_argument(
@@ -146,16 +148,17 @@ def main():
         help="If >0, fix the outer number of stages s to that value. If 0, the number of stages is computed automatically.",
     )
     parser.add_argument(
-        "--ES_s_inner",
+        "--ES_m_inner",
         default=0,
         type=int,
-        help="If >0, fixes the inner number of stages m (only if also the outer s is fixed). If 0, the number of stages is computed automatically.",
+        help="If >0 and the outer stages s are fixed, fixes the inner number of stages m. If 0 or outer s are not fixed, the number of stages m is computed automatically.",
     )
     parser.add_argument(
         "--o_freq",
         default=0,
         type=int,
-        help="Output frequency (write sol. to disk), every o_freq steps. If -1 then saves final solution as reference solution for error computations, if -2 saves it to be used as initial value for another simulation.",
+        help="Output frequency (write sol. to disk), every o_freq steps. \
+            If -1 then saves final solution as reference solution for error computations, if -2 saves it to be used as initial value for another simulation.",
     )
     parser.add_argument(
         "--rho_freq",
@@ -167,15 +170,15 @@ def main():
         "--safe_add",
         default=0,
         type=int,
-        help="Add safe_add additional stages to the default ones for reobustness regarding rapidly growing spectral radii. Usually 0,1 or 2 at most.",
+        help="Add safe_add additional stages to outer stages s, for robustness regarding rapidly growing spectral radii. Usually 0,1 or 2 at most.",
     )
-    parser.add_argument("--log_level", default=30, type=int, help="Logging level: 10 debug, 20 info, 30 warning.")
+    parser.add_argument("--log_level", default=20, type=int, help="Logging level: 10 debug, 20 info, 30 warning.")
     # problem args
     parser.add_argument(
         "--space_disc",
         default="DCT",
         type=str,
-        help="Space discretization method: FEM (finite element method), FD (finite difference method), DCT (discrete cosine transform).",
+        help="Space discretization method: FEM (finite element method) or DCT (discrete cosine transform).",
     )
     parser.add_argument(
         "--enable_output",
@@ -185,7 +188,10 @@ def main():
     )
     parser.add_argument("--output_file_name", default="monodomain", type=str, help="Output file name.")
     parser.add_argument(
-        "--output_root", default="results/", type=str, help="Output root folder, relative to the location of this file."
+        "--output_root",
+        default="results/",
+        type=str,
+        help="Output root folder, relative to the location of this file.",
     )
     parser.add_argument(
         "--ref_sol",
@@ -197,7 +203,8 @@ def main():
         "--ionic_model_name",
         default="TTP",
         type=str,
-        help="Ionic_model: HH (Hodgkin-Huxley 1952), CRN (Courtemanche-Ramirez-Nattel 1998), TTP (tenTusscher-Panfilov 2006), TTP_SMOOTH (a smoothed version of TTP), BS (the bistable, or Nagumo, model)",
+        help="Ionic_model: HH (Hodgkin-Huxley 1952), CRN (Courtemanche-Ramirez-Nattel 1998), \
+            TTP (tenTusscher-Panfilov 2006), TTP_SMOOTH (a smoothed version of TTP), BS (the bistable, or Nagumo, model)",
     )
     parser.add_argument(
         "--domain_name",
@@ -222,13 +229,14 @@ def main():
         "--pre_refinements",
         default=0,
         type=int,
-        help="When space_disc=FEM, loads a mesh which has already been pre-refined pre_refinements times. When space_disc=FD or DCT, builds a uniform mesh with mesh size 2**(pre_refinements) smaller than a baseline.",
+        help="When space_disc=FEM, loads a mesh which has already been pre-refined pre_refinements times.\
+              When space_disc=DCT, builds a uniform mesh with mesh size 2**(pre_refinements) smaller than a baseline.",
     )
     parser.add_argument(
         "--post_refinements",
         default=0,
         type=int,
-        help="When space_disc=FEM, refines the mesh post_refinements times, after loading it. No effect when space_disc=FD or DCT.",
+        help="When space_disc=FEM, refines the mesh post_refinements times, after loading it. No effect when space_disc=DCT.",
     )
     parser.add_argument(
         "--fibrosis",
@@ -240,7 +248,7 @@ def main():
         "--order",
         default=2,
         type=int,
-        help="Order of FEM, FD or DCT discretization. Any order for FEM, orders 2 and 4 for FD and DCT.",
+        help="Order of FEM or DCT discretization. Any order for FEM, orders 2 and 4 for DCT.",
     )
     parser.add_argument(
         "--mass_lumping",
@@ -252,19 +260,12 @@ def main():
     args = vars(parser.parse_args())
 
     executed_file_dir = os.path.dirname(os.path.realpath(__file__))
-    args["output_root"] = executed_file_dir + "/" + args["output_root"]
+    args["output_root"] = executed_file_dir + "/../" + args["output_root"]
 
     problem_params = modify_params(problem_params, args)
     int_params = modify_params(int_params, args)
 
-    t_end, u_end, sim_data, sol_data, step_stats = run_simulation(problem_params, int_params)
-
-    norm_u_end = abs(u_end)
-    if MPI.COMM_WORLD.Get_rank() == 0:
-        print(f"Solved in {sim_data['cpu_time']:0.8f} seconds")
-        print(f"Norm of solution: {norm_u_end}")
-        print(f'CV = {sol_data["CV"]}')
-        print(f"Step stats dict: {step_stats}")
+    run_simulation(problem_params, int_params)
 
 
 def run_simulation(problem_params, int_params):
@@ -301,7 +302,11 @@ def run_simulation(problem_params, int_params):
     mesh_dofs = u_end[0].getSize()
     dofs_stats, dofs_stats_avg = problem.parabolic.get_dofs_stats()
 
-    if MPI.COMM_WORLD.Get_rank() == 0:
+    rank = 0 if not hasattr(problem.parabolic, "comm") else problem.parabolic.comm.Get_rank()
+
+    norm_u_end = abs(u_end)
+
+    if rank == 0:
         sim_data["cpu_time"] = cpu_time
 
         sol_data["error_L2_availabe"] = error_availabe
@@ -326,7 +331,11 @@ def run_simulation(problem_params, int_params):
         data_man.write_dictionary("sol_data", sol_data)
         data_man.write_dictionary("step_stats", step_stats)
 
-    return t_end, u_end, sim_data, sol_data, step_stats
+        # print some info
+        print(f"Solved in {sim_data['cpu_time']:0.8f} seconds")
+        print(f"Norm of solution: {norm_u_end}")
+        print(f'CV = {sol_data["CV"]}')
+        print(f"Step stats dict: {step_stats}")
 
 
 if __name__ == "__main__":

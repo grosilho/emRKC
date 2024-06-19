@@ -165,6 +165,7 @@ cython_debug/
 build
 .vscode
 meshes_fibers_fibrosis
+results*
 
 # MacOS files
 *.DS_Store

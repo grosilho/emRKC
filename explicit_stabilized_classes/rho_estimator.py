@@ -33,167 +33,103 @@ class rho_estimator:
         if self.imex:
             if fy is not None:
                 self.eigval.expl, self.eigvec.expl, self.n_f_eval.expl = self.rho_f(
-                    lambda x: self.P.eval_f(x, t, eval_impl=False, eval_expl=True, eval_exp=False).expl, self.fx.expl, y, fy.expl, self.eigval.expl, self.eigvec.expl, self.n_f_eval.expl
+                    lambda x: self.P.eval_f(x, t, eval_impl=False, eval_expl=True, eval_exp=False).expl,
+                    self.fx.expl,
+                    y,
+                    fy.expl,
+                    self.eigval.expl,
+                    self.eigvec.expl,
+                    self.n_f_eval.expl,
                 )
                 self.eigval.impl, self.eigvec.impl, self.n_f_eval.impl = self.rho_f(
-                    lambda x: self.P.eval_f(x, t, eval_impl=True, eval_expl=False, eval_exp=False).impl, self.fx.impl, y, fy.impl, self.eigval.impl, self.eigvec.impl, self.n_f_eval.impl
+                    lambda x: self.P.eval_f(x, t, eval_impl=True, eval_expl=False, eval_exp=False).impl,
+                    self.fx.impl,
+                    y,
+                    fy.impl,
+                    self.eigval.impl,
+                    self.eigvec.impl,
+                    self.n_f_eval.impl,
                 )
             else:
                 self.eigval.expl, self.eigvec.expl, self.n_f_eval.expl = self.rho_f(
-                    lambda x: self.P.eval_f(x, t, eval_impl=False, eval_expl=True, eval_exp=False).expl, self.fx.expl, y, None, self.eigval.expl, self.eigvec.expl, self.n_f_eval.expl
+                    lambda x: self.P.eval_f(x, t, eval_impl=False, eval_expl=True, eval_exp=False).expl,
+                    self.fx.expl,
+                    y,
+                    None,
+                    self.eigval.expl,
+                    self.eigvec.expl,
+                    self.n_f_eval.expl,
                 )
                 self.eigval.impl, self.eigvec.impl, self.n_f_eval.impl = self.rho_f(
-                    lambda x: self.P.eval_f(x, t, eval_impl=True, eval_expl=False, eval_exp=False).impl, self.fx.impl, y, None, self.eigval.impl, self.eigvec.impl, self.n_f_eval.impl
+                    lambda x: self.P.eval_f(x, t, eval_impl=True, eval_expl=False, eval_exp=False).impl,
+                    self.fx.impl,
+                    y,
+                    None,
+                    self.eigval.impl,
+                    self.eigvec.impl,
+                    self.n_f_eval.impl,
                 )
         else:
             if fy is not None:
-                self.eigval, self.eigvec, self.n_f_eval = self.rho_f(lambda x: self.P.eval_f(x, t), self.fx, y, fy, self.eigval, self.eigvec, self.n_f_eval)
+                self.eigval, self.eigvec, self.n_f_eval = self.rho_f(
+                    lambda x: self.P.eval_f(x, t), self.fx, y, fy, self.eigval, self.eigvec, self.n_f_eval
+                )
             else:
-                self.eigval, self.eigvec, self.n_f_eval = self.rho_f(lambda x: self.P.eval_f(x, t), self.fx, y, None, self.eigval, self.eigvec, self.n_f_eval)
+                self.eigval, self.eigvec, self.n_f_eval = self.rho_f(
+                    lambda x: self.P.eval_f(x, t), self.fx, y, None, self.eigval, self.eigvec, self.n_f_eval
+                )
 
         return self.eigval
 
     def rho_expl(self, y, t, fy=None):
         if fy is not None:
             self.eigval.expl, self.eigvec.expl, self.n_f_eval.expl = self.rho_f(
-                lambda x: self.P.eval_f(x, t, eval_impl=False, eval_expl=True, eval_exp=False).expl, self.fx.expl, y, fy.expl, self.eigval.expl, self.eigvec.expl, self.n_f_eval.expl
+                lambda x: self.P.eval_f(x, t, eval_impl=False, eval_expl=True, eval_exp=False).expl,
+                self.fx.expl,
+                y,
+                fy.expl,
+                self.eigval.expl,
+                self.eigvec.expl,
+                self.n_f_eval.expl,
             )
         else:
             self.eigval.expl, self.eigvec.expl, self.n_f_eval.expl = self.rho_f(
-                lambda x: self.P.eval_f(x, t, eval_impl=False, eval_expl=True, eval_exp=False).expl, self.fx.expl, y, None, self.eigval.expl, self.eigvec.expl, self.n_f_eval.expl
+                lambda x: self.P.eval_f(x, t, eval_impl=False, eval_expl=True, eval_exp=False).expl,
+                self.fx.expl,
+                y,
+                None,
+                self.eigval.expl,
+                self.eigvec.expl,
+                self.n_f_eval.expl,
             )
 
         return self.eigval.expl
 
-    # def rho_impl(self, y, t, fy=None):
-    #     if fy is not None:
-    #         self.eigval.impl, self.eigvec.impl, self.n_f_eval.impl = self.rho_f(
-    #             lambda x: self.P.eval_f(x, t, eval_impl=True, eval_expl=False, eval_exp=False).impl, y, fy.impl, self.eigval.impl, self.eigvec.impl, self.n_f_eval.impl
-    #         )
-    #     else:
-    #         self.eigval.impl, self.eigvec.impl, self.n_f_eval.impl = self.rho_f(
-    #             lambda x: self.P.eval_f(x, t, eval_impl=True, eval_expl=False, eval_exp=False).impl, y, None, self.eigval.impl, self.eigvec.impl, self.n_f_eval.impl
-    #         )
-
-    #     return self.eigval.impl
-
-    # def rho_f(self, f, y, fy, eigval, eigvec, n_f_eval):
-    #     # if diagonal:
-    #     #     return self.rho_f_diagonal(f,y,fy,eigval,eigvec,n_f_eval)
-    #     # else:
-    #     return self.rho_f_nondiagonal(f, y, fy, eigval, eigvec, n_f_eval)
-
-    # def rho_f_nondiagonal(self, f, y, fy, eigval, eigvec, n_f_eval):
-    #     """
-    #     Estimates spectral radius of df/dy, for f with one component.
-    #     eigval,eigvec are guesses for the dominant eigenvalue,eigenvector. n_f_eval counts the number of f evaluations
-    #     fy can be None or an already available evaluation of f(y)
-
-    #     It is a nonlinear power method based on finite differentiation: df/dy(y)*v = f(y+v)-f(y) + O(|v|^2)
-    #     The Rayleigh quotient (dot prod) is replaced (bounded) with an l2-norm.
-    #     The algorithm used is a small change (initial vector and stopping criteria) of that of
-    #     Sommeijer-Shampine-Verwer, implemented in RKC.
-    #     When a guess is provided, in general it converges in 1-2 iterations.
-    #     """
-
-    #     maxiter = 100
-    #     safe = 1.05
-    #     tol = 1e-3
-    #     small = 1e-8
-    #     n_f_eval_0 = n_f_eval
-
-    #     z = eigvec
-    #     if fy is None:
-    #         fy = f(y)
-    #         n_f_eval += 1
-
-    #     y_norm = abs(y)
-    #     z_norm = abs(z)
-
-    #     # Building the vector z so that the difference z-yn is small
-    #     if y_norm != 0.0 and z_norm != 0.0:
-    #         # here z -> y+z*|y|*small/|z|
-    #         dzy = y_norm * small
-    #         quot = dzy / z_norm
-    #         # z *= quot
-    #         # z += y
-    #         z.aypx(quot, y)
-    #     elif y_norm != 0.0:
-    #         # here z-> y*(1+small)
-    #         dzy = y_norm * small
-    #         z.copy(y)
-    #         z *= 1.0 + small
-    #     elif z_norm != 0.0:
-    #         # here z-> z*small/|z|
-    #         dzy = small
-    #         quot = dzy / z_norm
-    #         z *= quot
-    #     else:
-    #         # here z=0 becomes z=random and z = z*small/|z|
-    #         z = self.P.dtype_u(self.P.init, val="random")
-    #         dzy = small
-    #         z_norm = abs(z)
-    #         quot = dzy / z_norm
-    #         z *= quot
-
-    #     """
-    #     Here dzy=|z-y| and z=y+(small perturbation)
-    #     In the following loop dzy=|z-yn| remains true, even with the new z
-    #     """
-
-    #     # Start the power method for non linear operator f
-    #     for iter in range(1, maxiter + 1):
-    #         eigvec = f(z)
-    #         eigvec -= fy
-    #         n_f_eval += 1
-
-    #         dfzfy = abs(eigvec)
-
-    #         eigval_old = eigval
-    #         eigval = dfzfy / dzy  # approximation of the Rayleigh quotient (not with dot product but just norms)
-    #         eigval = safe * eigval
-
-    #         self.logger.debug(f"rho_estimator: iter = {iter}, eigval = {eigval}")
-
-    #         if abs(eigval - eigval_old) <= eigval * tol:
-    #             # The last perturbation is stored. It will very likely be a
-    #             # good starting point for the next rho call.
-    #             eigvec = z
-    #             eigvec -= y
-    #             break
-
-    #         if dfzfy != 0.0:
-    #             quot = dzy / dfzfy
-    #             z = eigvec
-    #             z.aypx(quot, y)
-    #             # z *= quot
-    #             # z += y; # z is built such that dzy=|z-yn| is still true
-    #         else:
-    #             raise Exception("Spectral radius estimation error.")
-
-    #     if iter == maxiter and abs(eigval - eigval_old) > eigval * tol:
-    #         self.logger.warning("Spectral radius estimator did not converge.")
-
-    #     self.logger.info(f"Converged to rho = {eigval:1.2e} in {iter} iterations and {n_f_eval-n_f_eval_0} function evaluations.")
-
-    #     return eigval, eigvec, n_f_eval
-
     def rho_impl(self, y, t, fy=None):
         if fy is not None:
             self.eigval.impl, self.eigvec.impl, self.n_f_eval.impl = self.rho_f(
-                lambda x: self.P.eval_f(x, t, eval_impl=True, eval_expl=False, eval_exp=False, fh=self.fx).impl, self.fx.impl, y, fy.impl, self.eigval.impl, self.eigvec.impl, self.n_f_eval.impl
+                lambda x: self.P.eval_f(x, t, eval_impl=True, eval_expl=False, eval_exp=False, fh=self.fx).impl,
+                self.fx.impl,
+                y,
+                fy.impl,
+                self.eigval.impl,
+                self.eigvec.impl,
+                self.n_f_eval.impl,
             )
         else:
             self.eigval.impl, self.eigvec.impl, self.n_f_eval.impl = self.rho_f(
-                lambda x: self.P.eval_f(x, t, eval_impl=True, eval_expl=False, eval_exp=False, fh=self.fx).impl, self.fx.impl, y, None, self.eigval.impl, self.eigvec.impl, self.n_f_eval.impl
+                lambda x: self.P.eval_f(x, t, eval_impl=True, eval_expl=False, eval_exp=False, fh=self.fx).impl,
+                self.fx.impl,
+                y,
+                None,
+                self.eigval.impl,
+                self.eigvec.impl,
+                self.n_f_eval.impl,
             )
 
         return self.eigval.impl
 
     def rho_f(self, f, fx, y, fy, eigval, eigvec, n_f_eval):
-        # if diagonal:
-        #     return self.rho_f_diagonal(f,y,fy,eigval,eigvec,n_f_eval)
-        # else:
         return self.rho_f_nondiagonal(f, fx, y, fy, eigval, eigvec, n_f_eval)
 
     def rho_f_nondiagonal(self, f, fx, y, fy, eigval, eigvec, n_f_eval):
@@ -255,7 +191,7 @@ class rho_estimator:
         Here dzy=|z-y| and z=y+(small perturbation)
         In the following loop dzy=|z-yn| remains true, even with the new z
         """
-
+        pass
         # Start the power method for non linear operator f
         for iter in range(1, maxiter + 1):
             eigvec = f(z)
@@ -289,7 +225,9 @@ class rho_estimator:
         if iter == maxiter and abs(eigval - eigval_old) > eigval * tol:
             self.logger.warning("Spectral radius estimator did not converge.")
 
-        self.logger.info(f"Converged to rho = {eigval:1.2e} in {iter} iterations and {n_f_eval-n_f_eval_0} function evaluations.")
+        self.logger.info(
+            f"Converged to rho = {eigval:1.2e} in {iter} iterations and {n_f_eval-n_f_eval_0} function evaluations."
+        )
 
         return eigval, eigvec, n_f_eval
 

@@ -6,11 +6,10 @@ from pathlib import Path
 import os
 
 executed_file_dir = os.path.dirname(os.path.realpath(__file__))
-output_root = executed_file_dir + "/../results_tmp/"
-# output_root = executed_file_dir + "/../../pySDC/data/Monodomain/results_tmp/"
-domain_name = "cube_2D"
-refinements = -1
-ionic_model = "CRN"
+output_root = executed_file_dir + "/../results/"
+domain_name = "cuboid_2D_small"
+refinements = 2
+ionic_model = "TTP"
 file_name = "monodomain"
 file_path = Path(output_root + domain_name + "/" + "ref_" + str(refinements) + "/" + ionic_model + "/" + file_name)
 
@@ -24,6 +23,7 @@ n_dt = t.size
 print(f"t_end = {t[-1]}, n_dt = {n_dt}")
 
 V = []
+
 with open(file_path.with_suffix(".npy"), "rb") as file:
     for i in range(n_dt):
         V.append(np.load(file, allow_pickle=True))
