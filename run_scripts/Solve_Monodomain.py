@@ -176,7 +176,7 @@ def main():
     # problem args
     parser.add_argument(
         "--space_disc",
-        default="DCT",
+        default="FEM",
         type=str,
         help="Space discretization method: FEM (finite element method) or DCT (discrete cosine transform).",
     )
@@ -246,7 +246,7 @@ def main():
     )
     parser.add_argument(
         "--order",
-        default=2,
+        default=1,
         type=int,
         help="Order of FEM or DCT discretization. Any order for FEM, orders 2 and 4 for DCT.",
     )

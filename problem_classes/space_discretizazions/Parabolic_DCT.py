@@ -48,12 +48,6 @@ class Parabolic_DCT:
         self.se_t = 0.24  # mS/mm
 
         if "cube" in self.domain_name:
-            # if self.pre_refinements == -1: # only for generating initial value
-            # self.si_l *= 0.5
-            # self.se_l *= 0.5
-            # elif self.pre_refinements == 0:
-            # self.si_l *= 0.25
-            # self.se_l *= 0.25
             self.si_t = self.si_l
             self.se_t = self.se_l
 

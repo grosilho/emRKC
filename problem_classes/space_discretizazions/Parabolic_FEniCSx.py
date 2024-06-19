@@ -19,8 +19,13 @@ class Parabolic_FEniCSx:
         for key, val in problem_params.items():
             setattr(self, key, val)
 
-        if self.mass_lumping and (self.family != "CG" or self.order > 1):
-            raise Exception("You have specified mass_lumping=True but for order>1 or family!='CG'.")
+        self.comm = MPI.COMM_WORLD
+
+        if self.mass_lumping and self.order > 1:
+            raise Exception("To use mass lumping, order must be 1")
+        
+        # For now we only support CG. DG is partially implemented and not extensively tested. We currently have some issues with output, the rest should work but it is not used since a while...
+        self.family = "CG"
 
         self.define_domain_and_function_space()
         self.define_coefficients()

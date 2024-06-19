@@ -2,9 +2,6 @@ from dolfinx import fem
 import numpy as np
 from petsc4py import PETSc
 
-from pySDC.core.Errors import DataError
-
-
 class FEniCSx_Vector(object):
     """
     FEniCSx Function data type with arbitrary dimensions
@@ -25,7 +22,7 @@ class FEniCSx_Vector(object):
                   or a fem.FunctionSpace (with a constant value val to be assigned to the fem.Function)
             val: initial value (default: 0.0)
         Raises:
-            DataError: if init is none of the types above
+            Exception: if init is none of the types above
         """
 
         if isinstance(init, type(self)):
@@ -40,11 +37,11 @@ class FEniCSx_Vector(object):
             elif isinstance(val, np.ndarray):
                 self.values.x.array[:] = val[:]
             else:
-                raise DataError("something went wrong during %s initialization" % type(init))
+                raise Exception("something went wrong during %s initialization" % type(init))
         elif isinstance(init, fem.FunctionSpace):
             raise Exception("Cannot init with function space")
         else:
-            raise DataError("something went wrong during %s initialization" % type(init))
+            raise Exception("something went wrong during %s initialization" % type(init))
 
         self.str2petsc = {"addv": PETSc.InsertMode.ADD, "insert": PETSc.InsertMode.INSERT, "forward": PETSc.ScatterMode.FORWARD, "reverse": PETSc.ScatterMode.REVERSE}
 
@@ -54,7 +51,7 @@ class FEniCSx_Vector(object):
         elif isinstance(other, type(self)):  # copy the values of other into this vector
             self.values.x.array[:] = other.values.x.array[:]
         else:
-            raise DataError("Type error: cannot copy %s to %s" % (type(other), type(self)))
+            raise Exception("Type error: cannot copy %s to %s" % (type(other), type(self)))
 
     def zero(self):
         """
@@ -89,7 +86,7 @@ class FEniCSx_Vector(object):
                     )
                 self.values.interpolate(other.values, cells=cells, nmm_interpolation_data=nmm_interpolation_data)
         else:
-            raise DataError("Type error: cannot interpolate %s to %s" % (type(other), type(self)))
+            raise Exception("Type error: cannot interpolate %s to %s" % (type(other), type(self)))
 
     def restrict(self, other, cells=None, nmm_interpolation_data=None):
         self.interpolate(other, cells, nmm_interpolation_data)  # this is bad, should use restriction operator instead
@@ -144,14 +141,14 @@ class FEniCSx_Vector(object):
             me.values.vector.axpy(1.0, other.values.vector)
             return me
         else:
-            raise DataError("Type error: cannot add %s to %s" % (type(other), type(self)))
+            raise Exception("Type error: cannot add %s to %s" % (type(other), type(self)))
 
     def __iadd__(self, other):
         if isinstance(other, type(self)):
             self.values.vector.axpy(1.0, other.values.vector)
             return self
         else:
-            raise DataError("Type error: cannot iadd %s to %s" % (type(other), type(self)))
+            raise Exception("Type error: cannot iadd %s to %s" % (type(other), type(self)))
 
     def __sub__(self, other):
         if isinstance(other, type(self)):
@@ -159,14 +156,14 @@ class FEniCSx_Vector(object):
             me.values.vector.axpy(-1.0, other.values.vector)
             return me
         else:
-            raise DataError("Type error: cannot sub %s from %s" % (type(other), type(self)))
+            raise Exception("Type error: cannot sub %s from %s" % (type(other), type(self)))
 
     def __isub__(self, other):
         if isinstance(other, type(self)):
             self.values.vector.axpy(-1.0, other.values.vector)
             return self
         else:
-            raise DataError("Type error: cannot isub %s to %s" % (type(other), type(self)))
+            raise Exception("Type error: cannot isub %s to %s" % (type(other), type(self)))
 
     def __mul__(self, other):
         if isinstance(other, FEniCSx_Vector) or isinstance(other, float):
@@ -174,7 +171,7 @@ class FEniCSx_Vector(object):
             me *= other
             return me
         else:
-            raise DataError("Type error: cannot rmul %s to %s" % (type(other), type(self)))
+            raise Exception("Type error: cannot rmul %s to %s" % (type(other), type(self)))
 
     def __rmul__(self, other):
         if isinstance(other, float):
@@ -182,7 +179,7 @@ class FEniCSx_Vector(object):
             me *= other
             return me
         else:
-            raise DataError("Type error: cannot rmul %s to %s" % (type(other), type(self)))
+            raise Exception("Type error: cannot rmul %s to %s" % (type(other), type(self)))
 
     def __imul__(self, other):
         if isinstance(other, float):
@@ -192,7 +189,7 @@ class FEniCSx_Vector(object):
             self.values.x.array[:] *= other.values.x.array[:]
             return self
         else:
-            raise DataError("Type error: cannot imul %s to %s" % (type(other), type(self)))
+            raise Exception("Type error: cannot imul %s to %s" % (type(other), type(self)))
 
     def axpy(self, a, x):
         """
@@ -202,7 +199,7 @@ class FEniCSx_Vector(object):
         if isinstance(x, type(self)):
             self.values.vector.axpy(a, x.values.vector)
         else:
-            raise DataError("Type error: cannot add %s to %s" % (type(x), type(self)))
+            raise Exception("Type error: cannot add %s to %s" % (type(x), type(self)))
 
     def aypx(self, a, x):
         """
@@ -212,7 +209,7 @@ class FEniCSx_Vector(object):
         if isinstance(x, type(self)):
             self.values.vector.aypx(a, x.values.vector)
         else:
-            raise DataError("Type error: cannot add %s to %s" % (type(x), type(self)))
+            raise Exception("Type error: cannot add %s to %s" % (type(x), type(self)))
 
     def axpby(self, a, b, x):
         """
@@ -222,4 +219,4 @@ class FEniCSx_Vector(object):
         if isinstance(x, type(self)):
             self.values.vector.axpby(a, b, x.values.vector)
         else:
-            raise DataError("Type error: cannot add %s to %s" % (type(x), type(self)))
+            raise Exception("Type error: cannot add %s to %s" % (type(x), type(self)))

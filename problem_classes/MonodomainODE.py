@@ -78,7 +78,7 @@ class MonodomainODE:
             read_ok = self.read_reference_solution(u0, self.init_val_name, True)
             assert (
                 read_ok
-            ), f"ERROR: Could not read initial value from file {str(Path(self.output_folder) / Path(self.init_val_name).with_suffix(".npy"))}"
+            ), f"ERROR: Could not read initial value from file {str(Path(self.output_folder) / Path(self.init_val_name).with_suffix('.npy'))}"
 
         return u0
 
