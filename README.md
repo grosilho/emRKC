@@ -1,12 +1,13 @@
 # emRKC
 Exponential multirate Runge-Kutta-Chebychev methods applied to the monodomain model
 
-Code refactoring in progress....
+Further instructions to come.
+
 
 Pull image
 docker pull rosilho/emrkc_dolfinx
 
-From the root folder of emRKC repository, reate docker image:
+From the root folder of emRKC repository, create docker image:
 docker create --name emRKC -ti -v "$(pwd)":/src rosilho/emrkc_dolfinx
 
 Start, run stop the container:
