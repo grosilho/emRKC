@@ -277,7 +277,7 @@ def run_simulation(problem_params, int_params):
 
     step = stepper.step
     time_int = TimeIntegrator(problem, step)
-    t_end, u_end, cpu_time, CV = time_int.solve(dt, o_freq)
+    t_end, u_end, cpu_time = time_int.solve(dt, o_freq)
 
     step_stats = stepper.get_stats()
 
@@ -302,7 +302,6 @@ def run_simulation(problem_params, int_params):
         sol_data["error_L2_availabe"] = error_availabe
         sol_data["error_L2"] = error_L2
         sol_data["rel_error_L2"] = rel_error_L2
-        sol_data["CV"] = CV
         sol_data["tot_dofs"] = tot_dofs
         sol_data["mesh_dofs"] = mesh_dofs
         sol_data["avg_dofs_per_proc"] = dofs_stats_avg[0]
@@ -328,7 +327,6 @@ def run_simulation(problem_params, int_params):
         # print some info
         print(f"Solved in {sim_data['cpu_time']:0.8f} seconds")
         print(f"Norm of solution: {norm_u_end}")
-        print(f'CV = {sol_data["CV"]}')
         print(f"Step stats dict: {step_stats}")
 
 

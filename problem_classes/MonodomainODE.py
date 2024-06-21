@@ -109,10 +109,6 @@ class MonodomainODE:
         # return number of dofs in the mesh
         return self.parabolic.getSize()
 
-    def eval_on_points(self, u):
-        # evaluate the solution on a set of points (points are predefined/hardcoded in self.parabolic)
-        return self.parabolic.eval_on_points(u)
-
     def define_ionic_model(self):
         self.scale_Iion = 0.01  # used to convert currents in uA/cm^2 to uA/mm^2
         # scale_im is applied to the rhs of the ionic model, so that the rhs is in units of mV/ms

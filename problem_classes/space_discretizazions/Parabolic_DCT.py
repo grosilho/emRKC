@@ -24,7 +24,6 @@ class Parabolic_DCT:
         self.define_coefficients()
         self.define_diffusion()
         self.define_stimulus()
-        self.define_eval_points()
 
     def __del__(self):
         if self.o_freq > 0:
@@ -218,12 +217,6 @@ class Parabolic_DCT:
             return True
         else:
             return False
-
-    def define_eval_points(self):
-        pass
-
-    def eval_on_points(self, u):
-        return None
 
     def stim_region(self, stim_center, stim_radius):
         grids = self.grids

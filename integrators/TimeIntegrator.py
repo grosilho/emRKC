@@ -1,7 +1,5 @@
-import numpy as np
 import time
 from tqdm import tqdm
-from utils.compute_CV import compute_CV, compute_activation_times
 import logging
 
 
@@ -35,16 +33,6 @@ class TimeIntegrator:
         last = t >= Tend
         f = problem.dtype_f(problem.init, val=0.0)
 
-        eval_CV = False  # "cuboid" in problem.parabolic.domain_name
-        if eval_CV:
-            n_checkpoints = np.ceil((Tend - t) / dt).astype(int) + 10
-            t_vals = np.zeros((n_checkpoints, 1))
-            n_pts = problem.parabolic.eval_points.shape[0]
-            u_vals = np.zeros((n_pts, n_checkpoints))
-            curr_checkpoint = 0
-            t_vals[curr_checkpoint] = t
-            u_vals[:, curr_checkpoint] = problem.eval_on_points(u_n).reshape((n_pts,))
-
         show_bar = logging.getLogger("step").getEffectiveLevel() == logging.WARNING
 
         if show_bar:
@@ -60,11 +48,6 @@ class TimeIntegrator:
             u_n = self.step(u_n, t, dt, f)
             t += dt
 
-            if eval_CV:
-                curr_checkpoint += 1
-                t_vals[curr_checkpoint] = t
-                u_vals[:, curr_checkpoint] = problem.eval_on_points(u_n).reshape((n_pts,))
-
             if o_freq > 0 and n % o_freq == 0:
                 problem.write_solution(u_n, t)
 
@@ -78,19 +61,9 @@ class TimeIntegrator:
         if show_bar:
             pbar.close()
 
-        if eval_CV:
-            if curr_checkpoint + 1 < n_checkpoints:
-                curr_checkpoint += 1
-                t_vals = t_vals[:curr_checkpoint]
-                u_vals = u_vals[:, :curr_checkpoint]
-            t_th = compute_activation_times(t_vals, u_vals)
-            CV = compute_CV(t_th, problem.parabolic.eval_points)
-        else:
-            CV = 0.0
-
         if o_freq == -1:
             problem.write_reference_solution(u_n)
         elif o_freq == -2:
             problem.write_reference_solution(u_n, all=True)
 
-        return Tend, u_n, cpu_time, CV
+        return Tend, u_n, cpu_time

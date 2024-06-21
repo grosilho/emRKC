@@ -41,7 +41,6 @@ class Parabolic_FEniCSx:
         self.assemble_vec_mat()
         self.set_solver_options()
         self.define_mass_solver()
-        self.define_eval_points()
 
     def __del__(self):
         if self.o_freq > 0:
@@ -289,48 +288,6 @@ class Parabolic_FEniCSx:
         self.invert_mass_matrix(self.tmp1.values.vector, self.tmp2.values.vector)
         res -= self.tmp2
 
-    def define_eval_points(self):
-        # used to compute CV, valid only on cuboid domain
-        if "cuboid" in self.domain_name:
-            if "small" in self.domain_name:
-                n_pts = 5
-                self.dom_size = [[0.0, 0.0, 0.0], [5.0, 3.0, 1.0]]
-                a = np.array([[0.5, 0.5, 0.5]])
-            else:
-                n_pts = 10
-                self.dom_size = [[0.0, 0.0, 0.0], [20.0, 7.0, 3.0]]
-                a = np.array([[1.5, 1.5, 1.5]])
-            b = np.reshape(np.array(self.dom_size[1]), (1, 3))
-            x = np.reshape(np.linspace(0.0, 1.0, n_pts), (n_pts, 1))
-            self.eval_points = np.zeros((n_pts, 3))
-            for i in range(n_pts):
-                self.eval_points[i, :] = np.reshape(a + (b - a) * x[i], (3,))
-            if self.dim == 1:
-                self.eval_points[:, 1:] = 0
-            elif self.dim == 2:
-                self.eval_points[:, 2] = 0
-
-            bb_tree = geometry.bb_tree(self.domain, self.domain.topology.dim)
-            self.cells = []
-            self.points_on_proc = []
-            # Find cells whose bounding-box collide with the the points
-            cell_candidates = geometry.compute_collisions_points(bb_tree, self.eval_points)
-            # Choose one of the cells that contains the point
-            colliding_cells = geometry.compute_colliding_cells(self.domain, cell_candidates, self.eval_points)
-            for i, point in enumerate(self.eval_points):
-                if len(colliding_cells.links(i)) > 0:
-                    self.points_on_proc.append(point)
-                    self.cells.append(np.min(colliding_cells.links(i)[0]))
-            self.points_on_proc = np.array(self.points_on_proc, dtype=np.float64)
-            self.loc_glob_map = []
-            for i in range(self.points_on_proc.shape[0]):
-                p = self.points_on_proc[i, :]
-                for j in range(self.eval_points.shape[0]):
-                    q = self.eval_points[j, :]
-                    if np.linalg.norm(p - q) < np.max([np.linalg.norm(p), np.linalg.norm(q)]) * 1e-5:
-                        self.loc_glob_map.append(j)
-                        break
-
     def init_output(self, output_folder):
         self.output_folder = output_folder
         if self.o_freq > 0:
@@ -481,29 +438,6 @@ class Parabolic_FEniCSx:
             self.f0 = fem.Constant(self.domain, e1[: self.dim])
             self.s0 = fem.Constant(self.domain, e2[: self.dim])
             self.n0 = fem.Constant(self.domain, e3[: self.dim])
-
-    def eval_on_points(self, u):
-        if "cuboid" in self.domain_name:
-            # eval only on u[0]
-            u_val_loc = u[0].values.eval(self.points_on_proc, self.cells)
-            u_val_loc = np.reshape(u_val_loc, (self.points_on_proc.shape[0], 1))
-            data = self.loc_glob_map, u_val_loc
-            data = self.domain.comm.gather(data, root=0)
-            if self.domain.comm.rank == 0:
-                u_val = np.zeros((self.eval_points.shape[0], 1))
-                for i in range(self.domain.comm.size):
-                    loc_glob_map, u_val_loc = data[i]
-                    for j, u in zip(loc_glob_map, u_val_loc):
-                        u_val[j] = u
-            else:
-                assert data is None
-                u_val = np.zeros((self.eval_points.shape[0], 1))
-
-            self.domain.comm.Bcast(u_val, root=0)
-
-            return u_val
-        else:
-            return None
 
     def stim_region(self, stim_center, stim_radius):
         coord_inside_stim_box = []
