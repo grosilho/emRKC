@@ -1,5 +1,5 @@
-from explicit_stabilized_classes.rho_estimator import rho_estimator
-from explicit_stabilized_classes.es_methods import RKC, RKW, RKU, HSRKU, mES
+from integrators.explicit_stabilized_classes.rho_estimator import rho_estimator
+from integrators.explicit_stabilized_classes.es_methods import RKC, RKW, RKU, HSRKU, mES
 import logging
 
 
@@ -10,7 +10,7 @@ class explicit_stabilized:
         else:
             self.verbose = False
 
-        self.logger_step = logging.getLogger("step")
+        self.logger_step = logging.getLogger("stepper")
 
         self.damping = 0.05
         self.safe_add = 2
@@ -87,7 +87,8 @@ class explicit_stabilized:
         return u
 
     def get_stats(self):
-        self.s_avg = self.s_avg / self.steps_counter
+        if self.steps_counter > 0:
+            self.s_avg = self.s_avg / self.steps_counter
         step_stats = dict()
         step_stats["s_avg"] = self.s_avg
 
@@ -271,8 +272,9 @@ class multirate_explicit_stabilized(explicit_stabilized):
         return self.uj
 
     def get_stats(self):
-        self.s_avg = self.s_avg / self.steps_counter
-        self.m_avg = self.m_avg / self.steps_counter
+        if self.steps_counter > 0:
+            self.s_avg = self.s_avg / self.steps_counter
+            self.m_avg = self.m_avg / self.steps_counter
         step_stats = dict()
         step_stats["s_avg"] = self.s_avg
         step_stats["m_avg"] = self.m_avg

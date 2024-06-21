@@ -9,13 +9,15 @@ from petsc4py import PETSc
 from petsc4py.PETSc import ScalarType
 from pathlib import Path
 import json
+import logging
 
 from datatype_classes.FEniCSx_Vector import FEniCSx_Vector
 
 
 class Parabolic_FEniCSx:
     def __init__(self, **problem_params):
-        
+        self.logger = logging.getLogger("space")
+
         for key, val in problem_params.items():
             setattr(self, key, val)
 
@@ -23,9 +25,13 @@ class Parabolic_FEniCSx:
 
         if self.mass_lumping and self.order > 1:
             raise Exception("To use mass lumping, order must be 1")
-        
+
         # For now we only support CG. DG is partially implemented and not extensively tested. We currently have some issues with output, the rest should work but it is not used since a while...
         self.family = "CG"
+
+        # the mesh is readen from the same file as the fibers
+        self.mesh_and_fiber_folder = self.meshes_fibers_fibrosis_folder / Path("fibers")
+        self.fibrosis_folder = self.meshes_fibers_fibrosis_folder / Path("fibrosis")
 
         self.define_domain_and_function_space()
         self.define_coefficients()
@@ -38,7 +44,7 @@ class Parabolic_FEniCSx:
         self.define_eval_points()
 
     def __del__(self):
-        if self.enable_output:
+        if self.o_freq > 0:
             self.xdmf.close()
 
     @property
@@ -47,42 +53,51 @@ class Parabolic_FEniCSx:
 
     @property
     def mesh_name(self):
-        return "ref_" + str(self.pre_refinements)
+        return "ref_" + str(self.refinements)
 
     def define_domain_and_function_space(self):
-        self.mesh_fibers_folder = Path(self.meshes_fibers_root_folder) / Path(self.domain_name) / Path(self.mesh_name)
-        self.import_fibers = "cuboid" not in self.domain_name and "cube" not in self.domain_name
-        if self.import_fibers:
+        self.mesh_fibers_folder = Path(self.mesh_and_fiber_folder) / Path(self.domain_name) / Path(self.mesh_name)
+        self.import_domain_and_fibers = "cuboid" not in self.domain_name and "cube" not in self.domain_name
+        if self.import_domain_and_fibers:
             # read mesh from same file as fibers
             with io.XDMFFile(self.comm, self.mesh_fibers_folder / Path("fibers.xdmf"), "r") as xdmf:
                 self.domain = xdmf.read_mesh(name="mesh", xpath="Xdmf/Domain/Grid")
             self.dim = 3
         else:
-            if "cuboid" in self.domain_name:
-                if "small" in self.domain_name:
-                    dom_size = [[0.0, 0.0, 0.0], [5.0, 3.0, 1.0]]
-                    n_elems = 25 * 2**self.pre_refinements
-                else:
-                    dom_size = [[0.0, 0.0, 0.0], [20.0, 7.0, 3.0]]
-                    n_elems = 100 * 2**self.pre_refinements
-                self.dim = int(self.domain_name[7])
-            elif "cube" in self.domain_name:
-                dom_size = [[0.0, 0.0, 0.0], [100.0, 100.0, 100.0]]
-                n_elems = 250 * 2**self.pre_refinements
+            if "cube" in self.domain_name:
+                dom_size = np.array([100.0, 100.0, 100.0])
                 self.dim = int(self.domain_name[5])
+            elif "cuboid" in self.domain_name:
+                dom_size = np.array([20.0, 7.0, 3.0])
+                self.dim = int(self.domain_name[7])
+            else:
+                raise NotImplementedError("Only cube and cuboid domains are implemented for Parabolic_DCT.")
 
-            d = np.asarray(dom_size[1]) - np.asarray(dom_size[0])
-            max_d = np.max(d)
-            n = [n_elems] * self.dim
-            for i in range(len(n)):
-                n[i] = int(np.ceil(n[i] * d[i] / max_d))
+            factor = 4.0 if "very" in self.domain_name else 2.0
+            if "small" in self.domain_name:
+                dom_size /= factor
+            elif "large" in self.domain_name:
+                dom_size *= factor
+
+            dom_size = list(dom_size[: self.dim])
+            n_elems = [int(2 ** np.round(np.log2(5.0 * L * 2**self.refinements))) for L in dom_size]
 
             if self.dim == 1:
-                self.domain = mesh.create_interval(comm=self.comm, nx=n_elems, points=[dom_size[0][0], dom_size[1][0]])
+                self.domain = mesh.create_interval(comm=self.comm, nx=n_elems, points=[0.0, dom_size[0]])
             elif self.dim == 2:
-                self.domain = mesh.create_rectangle(comm=self.comm, n=n, cell_type=mesh.CellType.triangle, points=[dom_size[0][: self.dim], dom_size[1][: self.dim]])
+                self.domain = mesh.create_rectangle(
+                    comm=self.comm,
+                    n=n_elems,
+                    cell_type=mesh.CellType.triangle,
+                    points=[[0.0, 0.0], dom_size],
+                )
             elif self.dim == 3:
-                self.domain = mesh.create_box(comm=self.comm, n=n, cell_type=mesh.CellType.tetrahedron, points=[dom_size[0][: self.dim], dom_size[1][: self.dim]])
+                self.domain = mesh.create_box(
+                    comm=self.comm,
+                    n=n_elems,
+                    cell_type=mesh.CellType.tetrahedron,
+                    points=[[0.0, 0.0, 0.0], dom_size],
+                )
             else:
                 raise Exception(f"need dim=1,2,3 to instantiate problem, got dim={self.dim}")
 
@@ -103,7 +118,7 @@ class Parabolic_FEniCSx:
         self.si_t = 0.019  # mS/mm
         self.se_t = 0.24  # mS/mm
 
-        if "cube" in self.domain_name:            
+        if "cube" in self.domain_name:
             self.si_t = self.si_l
             self.se_t = self.se_l
 
@@ -122,8 +137,10 @@ class Parabolic_FEniCSx:
         self.define_fibers()
         if self.fibrosis:
             fibrosis_r_field, percentages, quantiles = self.read_fibrosis()
-            quantile = quantiles[1]  # quantiles are for 30%, 50%, 70%
-            diff_t_ufl_expr = (self.sigma_t / self.chi / self.Cm) * ufl.conditional(ufl.lt(fibrosis_r_field, quantile), 1.0, 0.0)
+            quantile = quantiles[0]  # usually only one quatiles is availble, the median.
+            diff_t_ufl_expr = (self.sigma_t / self.chi / self.Cm) * ufl.conditional(
+                ufl.lt(fibrosis_r_field, quantile), 1.0, 0.0
+            )
             self.diff_t = fem.Function(self.V)
             self.diff_t.interpolate(fem.Expression(diff_t_ufl_expr, self.V.element.interpolation_points()))
 
@@ -133,7 +150,11 @@ class Parabolic_FEniCSx:
         self.mass = u * v * ufl.dx
 
         def diff_tens(w):
-            return self.diff_l * self.f0 * ufl.dot(self.f0, w) + self.diff_t * self.s0 * ufl.dot(self.s0, w) + self.diff_t * self.n0 * ufl.dot(self.n0, w)
+            return (
+                self.diff_l * self.f0 * ufl.dot(self.f0, w)
+                + self.diff_t * self.s0 * ufl.dot(self.s0, w)
+                + self.diff_t * self.n0 * ufl.dot(self.n0, w)
+            )
 
         if self.family == "CG":
             self.diff = ufl.dot(diff_tens(ufl.grad(u)), ufl.grad(v)) * ufl.dx
@@ -164,7 +185,7 @@ class Parabolic_FEniCSx:
                 + eta / (h**beta0) * gamma * ufl.inner(ufl.jump(v, n), ufl.jump(u, n)) * ufl.dS
             )
         else:
-            raise ParameterError("problem_params['family'] must be either 'CG' or 'DG'")
+            raise Exception("problem_params['family'] must be either 'CG' or 'DG'")
 
         self.mass_form = fem.form(self.mass)
         self.diff_form = fem.form(self.diff)
@@ -262,7 +283,9 @@ class Parabolic_FEniCSx:
         return u_sol
 
     def add_disc_laplacian(self, uh, res):
-        self.K.mult(uh.values.vector, self.tmp1.values.vector)  # WARNING: DO NOT DO -uh.values.vector HERE SINCE IT CREATES MEMORY LEAK!!!
+        self.K.mult(
+            uh.values.vector, self.tmp1.values.vector
+        )  # WARNING: DO NOT DO -uh.values.vector HERE SINCE IT CREATES MEMORY LEAK!!!
         self.invert_mass_matrix(self.tmp1.values.vector, self.tmp2.values.vector)
         res -= self.tmp2
 
@@ -310,8 +333,10 @@ class Parabolic_FEniCSx:
 
     def init_output(self, output_folder):
         self.output_folder = output_folder
-        if self.enable_output:
-            self.xdmf = io.XDMFFile(self.domain.comm, self.output_folder / Path(self.output_file_name).with_suffix(".xdmf"), "w")
+        if self.o_freq > 0:
+            self.xdmf = io.XDMFFile(
+                self.domain.comm, self.output_folder / Path(self.output_file_name).with_suffix(".xdmf"), "w"
+            )
             self.xdmf.write_mesh(self.domain)
             if self.order > 1:
                 self.V_order_one = fem.FunctionSpace(self.domain, (self.family, 1))
@@ -346,34 +371,44 @@ class Parabolic_FEniCSx:
         return y
 
     def write_solution(self, u, t, all):
-        if self.enable_output:
-            if self.family == "CG":
-                if not all:
-                    u[0].values.name = "V"
-                    if self.order == 1:
-                        self.xdmf.write_function(u[0].values, t)
-                    else:
-                        self.sol_order_one.interpolate(
-                            u[0].values,
-                            nmm_interpolation_data=fem.create_nonmatching_meshes_interpolation_data(
-                                self.sol_order_one.function_space.mesh._cpp_object, self.sol_order_one.function_space.element, u[0].values.function_space.mesh._cpp_object
-                            ),
-                        )
-                        self.sol_order_one.vector.ghostUpdate(PETSc.InsertMode.INSERT, PETSc.ScatterMode.FORWARD)
-                        self.sol_order_one.name = "V"
-                        self.xdmf.write_function(self.sol_order_one, t)
+        if self.family == "CG":
+            if not all:
+                u[0].values.name = "V"
+                if self.order == 1:
+                    self.xdmf.write_function(u[0].values, t)
                 else:
-                    for i in range(u.size):
-                        u[i].values.name = f"u_{i}"
-                        self.xdmf.write_function(u[i].values, t)
+                    self.sol_order_one.interpolate(
+                        u[0].values,
+                        nmm_interpolation_data=fem.create_nonmatching_meshes_interpolation_data(
+                            self.sol_order_one.function_space.mesh._cpp_object,
+                            self.sol_order_one.function_space.element,
+                            u[0].values.function_space.mesh._cpp_object,
+                        ),
+                    )
+                    self.sol_order_one.vector.ghostUpdate(PETSc.InsertMode.INSERT, PETSc.ScatterMode.FORWARD)
+                    self.sol_order_one.name = "V"
+                    self.xdmf.write_function(self.sol_order_one, t)
             else:
-                raise Exception("write_solution sol not implemented for DG")
+                for i in range(u.size):
+                    u[i].values.name = f"u_{i}"
+                    self.xdmf.write_function(u[i].values, t)
+        else:
+            raise Exception("write_solution sol not implemented for DG")
 
     def write_reference_solution(self, uh, indeces):
         [uh[i].ghostUpdate(PETSc.InsertMode.INSERT, PETSc.ScatterMode.FORWARD) for i in indeces]
         if self.family == "CG":
-            adios4dolfinx.write_mesh(self.domain, self.output_folder / Path(self.output_file_name).with_suffix(".bp"), engine="BP4")
-            [adios4dolfinx.write_function(uh[i].values, self.output_folder / Path(self.output_file_name + "_" + str(i)).with_suffix(".bp"), engine="BP4") for i in indeces]
+            adios4dolfinx.write_mesh(
+                self.domain, self.output_folder / Path(self.output_file_name).with_suffix(".bp"), engine="BP4"
+            )
+            [
+                adios4dolfinx.write_function(
+                    uh[i].values,
+                    self.output_folder / Path(self.output_file_name + "_" + str(i)).with_suffix(".bp"),
+                    engine="BP4",
+                )
+                for i in indeces
+            ]
         else:
             raise Exception("write_reference_solution not implemented for DG")
 
@@ -381,18 +416,29 @@ class Parabolic_FEniCSx:
         if self.family == "CG":
             ref_sol_path = Path(self.output_folder) / Path(ref_file_name)
             if ref_sol_path.with_suffix(".bp").is_dir():
-                mesh_ref = adios4dolfinx.read_mesh(self.domain.comm, ref_sol_path.with_suffix(".bp"), engine="BP4", ghost_mode=mesh.GhostMode.shared_facet)
+                mesh_ref = adios4dolfinx.read_mesh(
+                    self.domain.comm,
+                    ref_sol_path.with_suffix(".bp"),
+                    engine="BP4",
+                    ghost_mode=mesh.GhostMode.shared_facet,
+                )
                 if self.order > 1:
                     print("WARNING: reading reference solution with lower order than current solution.")
                 V_ref = fem.FunctionSpace(mesh_ref, (self.family, 1))
                 ref_sol = fem.Function(V_ref)
                 nmm_interpolation_data = fem.create_nonmatching_meshes_interpolation_data(
-                    uh[indeces[0]].values.function_space.mesh._cpp_object, uh[indeces[0]].values.function_space.element, ref_sol.function_space.mesh._cpp_object
+                    uh[indeces[0]].values.function_space.mesh._cpp_object,
+                    uh[indeces[0]].values.function_space.element,
+                    ref_sol.function_space.mesh._cpp_object,
                 )
                 map = self.domain.topology.index_map(self.domain.topology.dim)
                 cells = np.arange(map.size_local + map.num_ghosts, dtype=np.int32)
                 for i in indeces:
-                    adios4dolfinx.read_function(ref_sol, Path(self.output_folder) / Path(ref_file_name + "_" + str(i)).with_suffix(".bp"), engine="BP4")
+                    adios4dolfinx.read_function(
+                        ref_sol,
+                        Path(self.output_folder) / Path(ref_file_name + "_" + str(i)).with_suffix(".bp"),
+                        engine="BP4",
+                    )
                     ref_sol.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                     uh[i].values.interpolate(ref_sol, cells=cells, nmm_interpolation_data=nmm_interpolation_data)
                     uh[i].ghostUpdate(PETSc.InsertMode.INSERT, PETSc.ScatterMode.FORWARD)
@@ -403,16 +449,31 @@ class Parabolic_FEniCSx:
             raise Exception("read_reference_solution not implemented for DG")
 
     def define_fibers(self):
-        if self.import_fibers:
+        if self.import_domain_and_fibers:
             fixed_fibers_path = self.mesh_fibers_folder / Path("fibers_fixed_f0")
             if fixed_fibers_path.is_dir():
-                self.f0 = self.import_fixed_fiber(self.mesh_fibers_folder / Path("fibers_fixed_f0"))
-                self.s0 = self.import_fixed_fiber(self.mesh_fibers_folder / Path("fibers_fixed_s0"))
-                self.n0 = self.import_fixed_fiber(self.mesh_fibers_folder / Path("fibers_fixed_n0"))
+                f0_tmp = self.import_fixed_fiber(self.mesh_fibers_folder / Path("fibers_fixed_f0"))
+                s0_tmp = self.import_fixed_fiber(self.mesh_fibers_folder / Path("fibers_fixed_s0"))
+                n0_tmp = self.import_fixed_fiber(self.mesh_fibers_folder / Path("fibers_fixed_n0"))
             else:
-                self.f0 = self.read_mesh_data(self.mesh_fibers_folder / Path("fibers.h5"), self.domain, "f0")
-                self.s0 = self.read_mesh_data(self.mesh_fibers_folder / Path("fibers.h5"), self.domain, "s0")
-                self.n0 = self.read_mesh_data(self.mesh_fibers_folder / Path("fibers.h5"), self.domain, "n0")
+                f0_tmp = self.read_mesh_data(self.mesh_fibers_folder / Path("fibers.h5"), "f0")
+                s0_tmp = self.read_mesh_data(self.mesh_fibers_folder / Path("fibers.h5"), "s0")
+                n0_tmp = self.read_mesh_data(self.mesh_fibers_folder / Path("fibers.h5"), "n0")
+
+            el = ufl.VectorElement("CG", self.domain.ufl_cell(), 1)
+            self.V_fiber = fem.FunctionSpace(self.domain, el)
+            self.f0 = fem.Function(self.V_fiber)
+            self.s0 = fem.Function(self.V_fiber)
+            self.n0 = fem.Function(self.V_fiber)
+            nmm_interpolation_data = fem.create_nonmatching_meshes_interpolation_data(
+                self.f0.function_space.mesh._cpp_object,
+                self.f0.function_space.element,
+                f0_tmp.function_space.mesh._cpp_object,
+            )
+            for fib, fib_tmp in zip([self.f0, self.s0, self.n0], [f0_tmp, s0_tmp, n0_tmp]):
+                fib.interpolate(fib_tmp, nmm_interpolation_data=nmm_interpolation_data)
+                fib.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
         else:
             e1 = np.array([1.0, 0.0, 0.0])
             e2 = np.array([0.0, 1.0, 0.0])
@@ -459,10 +520,14 @@ class Parabolic_FEniCSx:
         return self.stim_vec
 
     def read_fibrosis(self):
-        mesh_fib = adios4dolfinx.read_mesh(self.domain.comm, self.mesh_fibers_folder / Path("fibrosis.bp"), engine="BP4", ghost_mode=mesh.GhostMode.shared_facet)
+        fibrosis_path = self.fibrosis_folder / Path(self.domain_name) / Path(self.mesh_name)
+        fibrosis_file = fibrosis_path / Path("fibrosis.bp")
+        mesh_fib = adios4dolfinx.read_mesh(
+            self.domain.comm, fibrosis_file, engine="BP4", ghost_mode=mesh.GhostMode.shared_facet
+        )
         V_fib = fem.FunctionSpace(mesh_fib, ("CG", 1))
         fibrosis = fem.Function(V_fib)
-        adios4dolfinx.read_function(fibrosis, self.mesh_fibers_folder / Path("fibrosis.bp"), engine="BP4")
+        adios4dolfinx.read_function(fibrosis, fibrosis_file, engine="BP4")
         fibrosis_i = fem.Function(self.V)
         fibrosis_i.interpolate(
             fibrosis,
@@ -473,7 +538,7 @@ class Parabolic_FEniCSx:
             ),
         )
 
-        with open(self.mesh_fibers_folder / Path("quantiles.json"), "r") as f:
+        with open(fibrosis_path / Path("quantiles.json"), "r") as f:
             data = json.load(f)
         quantiles = data["quantiles"]
         percentages = data["perc"]
@@ -488,19 +553,29 @@ class Parabolic_FEniCSx:
         ref_sol_on_V.interpolate(
             ref_sol.values,
             nmm_interpolation_data=fem.create_nonmatching_meshes_interpolation_data(
-                ref_sol_on_V.function_space.mesh._cpp_object, ref_sol_on_V.function_space.element, ref_sol.values.function_space.mesh._cpp_object
+                ref_sol_on_V.function_space.mesh._cpp_object,
+                ref_sol_on_V.function_space.element,
+                ref_sol.values.function_space.mesh._cpp_object,
             ),
         )
         ref_sol_on_V.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-        error_L2 = np.sqrt(self.domain.comm.allreduce(fem.assemble_scalar(fem.form((uh.values - ref_sol_on_V) ** 2 * ufl.dx)), op=MPI.SUM))
-        sol_norm_L2 = np.sqrt(self.domain.comm.allreduce(fem.assemble_scalar(fem.form(ref_sol_on_V**2 * ufl.dx)), op=MPI.SUM))
+        error_L2 = np.sqrt(
+            self.domain.comm.allreduce(
+                fem.assemble_scalar(fem.form((uh.values - ref_sol_on_V) ** 2 * ufl.dx)), op=MPI.SUM
+            )
+        )
+        sol_norm_L2 = np.sqrt(
+            self.domain.comm.allreduce(fem.assemble_scalar(fem.form(ref_sol_on_V**2 * ufl.dx)), op=MPI.SUM)
+        )
         rel_error_L2 = error_L2 / sol_norm_L2
 
         return error_L2, rel_error_L2
 
-    def read_mesh_data(self, file_path: Path, mesh: mesh.Mesh, data_path: str):
+    def read_mesh_data(self, file_path: Path, data_path: str):
         # see https://fenicsproject.discourse.group/t/i-o-from-xdmf-hdf5-files-in-dolfin-x/3122/48
         assert file_path.is_file(), f"File {file_path} does not exist"
+        with io.XDMFFile(self.comm, file_path.with_suffix(".xdmf"), "r") as xdmf:
+            mesh = xdmf.read_mesh(name="mesh", xpath="Xdmf/Domain/Grid")
         infile = h5py.File(file_path, "r", driver="mpio", comm=mesh.comm)
         num_nodes_global = mesh.geometry.index_map().size_global
         assert data_path in infile.keys(), f"Data {data_path} does not exist"
@@ -542,6 +617,7 @@ class Parabolic_FEniCSx:
             dof_pos = x_dofmap.reshape(-1) * shape[1] + i
             uh.x.array[dof_pos] = arr_i
         infile.close()
+
         return uh
 
     def import_fixed_fiber(self, input_folder):
@@ -551,20 +627,15 @@ class Parabolic_FEniCSx:
         V_r = fem.FunctionSpace(domain_r, el)
         fib_r = fem.Function(V_r)
         adios4dolfinx.read_function(fib_r, input_folder, "BP4")
-        fib = fem.Function(self.V_fiber)
-        fib.interpolate(
-            fib_r,
-            nmm_interpolation_data=fem.create_nonmatching_meshes_interpolation_data(
-                fib.function_space.mesh._cpp_object,
-                fib.function_space.element,
-                fib_r.function_space.mesh._cpp_object,
-            ),
-        )
-        fib.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-        return fib
+        return fib_r
 
     def get_dofs_stats(self):
-        data = (self.tmp1.n_loc_dofs + self.tmp1.n_ghost_dofs, self.tmp1.n_loc_dofs, self.tmp1.n_ghost_dofs, self.tmp1.n_ghost_dofs / (self.tmp1.n_loc_dofs + self.tmp1.n_loc_dofs))
+        data = (
+            self.tmp1.n_loc_dofs + self.tmp1.n_ghost_dofs,
+            self.tmp1.n_loc_dofs,
+            self.tmp1.n_ghost_dofs,
+            self.tmp1.n_ghost_dofs / (self.tmp1.n_loc_dofs + self.tmp1.n_loc_dofs),
+        )
         data = self.comm.gather(data, root=0)
         data = self.comm.bcast(data, root=0)
         avg = [0.0, 0.0, 0.0, 0]

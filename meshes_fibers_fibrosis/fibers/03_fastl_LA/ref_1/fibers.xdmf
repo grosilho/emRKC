@@ -1,0 +1,56 @@
+<?xml version="1.0" ?>
+<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>
+<Xdmf Version="2.0">
+  <Domain>
+    <Grid Name="CellTime" GridType="Collection" CollectionType="Temporal">
+      <Grid Name="mesh" GridType="Uniform">
+        <Time Value="0"/>
+        <Geometry GeometryType="XYZ">
+          <DataItem Dimensions="244348 3" NumberType="Float" Precision="8" Format="HDF">
+            fibers.h5:/nodes
+          </DataItem>
+        </Geometry>
+        <Topology TopologyType="Tetrahedron" NumberOfElements="1115248">
+          <DataItem Dimensions="1115248 4" NumberType="UInt" Format="HDF">
+            fibers.h5:/cells
+          </DataItem>
+        </Topology>
+        <Attribute Name="f0" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="244348 3" NumberType="Float" Precision="8" Format="HDF">
+            fibers.h5:/f0
+          </DataItem>
+        </Attribute>
+        <Attribute Name="n0" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="244348 3" NumberType="Float" Precision="8" Format="HDF">
+            fibers.h5:/n0
+          </DataItem>
+        </Attribute>
+        <Attribute Name="phi" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="244348 1" NumberType="Float" Precision="8" Format="HDF">
+            fibers.h5:/phi
+          </DataItem>
+        </Attribute>
+        <Attribute Name="psi_ab" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="244348 1" NumberType="Float" Precision="8" Format="HDF">
+            fibers.h5:/psi_ab
+          </DataItem>
+        </Attribute>
+        <Attribute Name="psi_r" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="244348 1" NumberType="Float" Precision="8" Format="HDF">
+            fibers.h5:/psi_r
+          </DataItem>
+        </Attribute>
+        <Attribute Name="psi_v" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="244348 1" NumberType="Float" Precision="8" Format="HDF">
+            fibers.h5:/psi_v
+          </DataItem>
+        </Attribute>
+        <Attribute Name="s0" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="244348 3" NumberType="Float" Precision="8" Format="HDF">
+            fibers.h5:/s0
+          </DataItem>
+        </Attribute>
+      </Grid>
+    </Grid>
+  </Domain>
+</Xdmf>

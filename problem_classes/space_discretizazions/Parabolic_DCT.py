@@ -1,15 +1,24 @@
 import numpy as np
 import scipy as sp
-from datatype_classes.FD_Vector import FD_Vector
+from datatype_classes.DCT_Vector import DCT_Vector
 from pathlib import Path
 import os
+import logging
 
 
 class Parabolic_DCT:
     def __init__(self, **problem_params):
+        self.logger = logging.getLogger("space")
 
         for key, val in problem_params.items():
             setattr(self, key, val)
+
+        assert self.order in [2, 4], "Only order 2 and 4 are implemented for Parabolic_DCT."
+
+        if self.post_refinements > 0:
+            self.logger.warning("Post refinements are not implemented for Parabolic_DCT. Ignoring them.")
+        if self.fibrosis:
+            self.logger.warning("Fibrosis is not implemented for Parabolic_DCT. Ignoring it.")
 
         self.define_domain()
         self.define_coefficients()
@@ -18,7 +27,7 @@ class Parabolic_DCT:
         self.define_eval_points()
 
     def __del__(self):
-        if self.enable_output:
+        if self.o_freq > 0:
             self.output_file.close()
             with open(
                 self.output_file_path.parent / Path(self.output_file_name + '_txyz').with_suffix(".npy"), 'wb'
@@ -30,11 +39,11 @@ class Parabolic_DCT:
 
     @property
     def vector_type(self):
-        return FD_Vector
+        return DCT_Vector
 
     @property
     def mesh_name(self):
-        return "ref_" + str(self.pre_refinements)
+        return "ref_" + str(self.refinements)
 
     def define_solver(self):
         pass
@@ -65,23 +74,22 @@ class Parabolic_DCT:
 
     def define_domain(self):
         if "cube" in self.domain_name:
-            self.dom_size = (100.0, 100.0, 100.0)
+            self.dom_size = np.array([100.0, 100.0, 100.0])
             self.dim = int(self.domain_name[5])
-        else:  # cuboid
-            if "smaller" in self.domain_name:
-                self.dom_size = (10.0, 4.5, 2.0)
-            elif "small" in self.domain_name:
-                self.dom_size = (5.0, 3.0, 1.0)
-            elif "very_large" in self.domain_name:
-                self.dom_size = (280.0, 112.0, 48.0)
-            elif "large" in self.domain_name:
-                self.dom_size = (60.0, 21.0, 9.0)
-            else:
-                self.dom_size = (20.0, 7.0, 3.0)
+        elif "cuboid" in self.domain_name:
+            self.dom_size = np.array([20.0, 7.0, 3.0])
             self.dim = int(self.domain_name[7])
+        else:
+            raise NotImplementedError("Only cube and cuboid domains are implemented for Parabolic_DCT.")
+
+        factor = 4.0 if "very" in self.domain_name else 2.0
+        if "small" in self.domain_name:
+            self.dom_size /= factor
+        elif "large" in self.domain_name:
+            self.dom_size *= factor
 
         self.dom_size = self.dom_size[: self.dim]
-        self.n_elems = [int(2 ** np.round(np.log2(5.0 * L * 2**self.pre_refinements))) for L in self.dom_size]
+        self.n_elems = [int(2 ** np.round(np.log2(5.0 * L * 2**self.refinements))) for L in self.dom_size]
         self.grids, self.dx = self.get_grids_dx(self.dom_size, self.n_elems)
 
         self.shape = tuple(np.flip([x.size for x in self.grids]))
@@ -178,7 +186,7 @@ class Parabolic_DCT:
     def init_output(self, output_folder):
         self.output_folder = output_folder
         self.output_file_path = self.output_folder / Path(self.output_file_name).with_suffix(".npy")
-        if self.enable_output:
+        if self.o_freq > 0:
             if self.output_file_path.is_file():
                 os.remove(self.output_file_path)
             if not self.output_folder.is_dir():
@@ -187,12 +195,11 @@ class Parabolic_DCT:
             self.t_out = []
 
     def write_solution(self, u, t, all):
-        if self.enable_output:
-            if not all:
-                np.save(self.output_file, u[0].values.reshape(self.shape))
-                self.t_out.append(t)
-            else:
-                raise NotImplementedError("all=True not implemented for Parabolic_FD.write_solution")
+        if not all:
+            np.save(self.output_file, u[0].values.reshape(self.shape))
+            self.t_out.append(t)
+        else:
+            raise NotImplementedError("all=True not implemented for Parabolic_FD.write_solution")
 
     def write_reference_solution(self, uh, indeces):
         if self.output_file_path.is_file():

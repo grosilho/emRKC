@@ -1,5 +1,5 @@
 import numpy as np
-from explicit_stabilized_classes.rho_estimator import rho_estimator
+from integrators.explicit_stabilized_classes.rho_estimator import rho_estimator
 import logging
 
 
@@ -12,7 +12,7 @@ class explicit_Euler:
         else:
             self.verbose = False
 
-        self.logger_step = logging.getLogger("step")
+        self.logger_step = logging.getLogger("stepper")
 
         # updates spectral radius every rho_freq steps
         if "rho_freq" not in params:
@@ -67,24 +67,9 @@ class explicit_Euler:
 
         return u
 
-    # def step(self, u, t, dt, *args):
-    #     P = self.P
-
-    #     P.eval_f(u, t, fh=self.f0)
-    #     self.update_n_substeps(u, t, dt, self.f0)
-
-    #     if self.logger_step.level <= logging.INFO:
-    #         self.logger_step.info(f"t = {t:1.2e}, dt = {dt:1.2e}, n = {self.n_substeps}, max_dt = {self.max_dt:1.2e}, rho = {self.estimated_rho:1.2e}, |y| = {abs(u):1.2e}")
-
-    #     u.axpy(dt, self.f0)
-
-    #     self.steps_counter += 1
-    #     self.substeps_avg += 1
-
-    #     return u
-
     def get_stats(self):
-        self.substeps_avg = self.substeps_avg / self.steps_counter
+        if self.steps_counter > 0:
+            self.substeps_avg = self.substeps_avg / self.steps_counter
         step_stats = dict()
         step_stats["substeps_avg"] = self.substeps_avg
 
@@ -100,7 +85,7 @@ class exponential_explicit_implicit_Euler:
         else:
             self.verbose = False
 
-        self.logger_step = logging.getLogger("step")
+        self.logger_step = logging.getLogger("stepper")
 
         self.P = problem
 

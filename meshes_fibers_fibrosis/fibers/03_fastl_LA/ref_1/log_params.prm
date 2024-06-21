@@ -1,0 +1,332 @@
+# Listing of Parameters
+# ---------------------
+subsection Fiber generation
+  subsection Mesh and space discretization
+    # Specify whether the input mesh has hexahedral or tetrahedral elements.
+    # Tetrahedral meshes can only be imported from file.
+    # Available options are: Hex | Tet.
+    set Element type          = Tet         # default: Hex
+
+    # Number of global mesh refinement steps applied to the initial grid.
+    set Number of refinements = 0
+
+    # Degree of the FE space.
+    set FE space degree       = 1
+
+    # Available options are: Slab | Left ventricle | Left ventricle complete |
+    # Left atrium.
+    set Geometry type         = Left atrium # default: Left ventricle
+
+
+    subsection File
+      # Mesh file.
+      set Filename       = ./meshes/mesh/03_fastl_LA_ref_1.msh # default: 
+
+      # Mesh scaling factor: 1e-3 => from [mm] to [m].
+      set Scaling factor = 1.                                  # default: 1
+    end
+
+  end
+
+  subsection Slab
+    # Normal slab or sphere slab
+    set Sphere slab               = false
+
+    # If true, fibers in the spherical slab are directed radially.
+    set Sphere with radial fibers = true
+
+    # Coordinates for North pole of sphere slab.
+    set North pole                = 0 0 0.025
+
+    # Coordinates for South pole of sphere slab.
+    set South pole                = 0 0 -0.025
+
+    # Boundary tags of Slab base up.
+    set Tags base up              = 50
+
+    # Boundary tags of Slab base down.
+    set Tags base down            = 60
+
+    # Boundary tags of epicardium.
+    set Tags epi                  = 10
+
+    # Boundary tags of endocardium.
+    set Tags endo                 = 20
+
+    # Alpha left epicardium [°][-].
+    set alpha epi                 = 0
+
+    # Alpha left endocardium [°][+].
+    set alpha endo                = 0
+
+    # Beta left epicardium [°][+].
+    set beta epi                  = 0
+
+    # Beta left endocardium [°][-].
+    set beta endo                 = 0
+  end
+
+  subsection Left ventricle
+    # Boundary tags of Ventricle base.
+    set Tags base      = 50
+
+    # Boundary tags of epicardium.
+    set Tags epi       = 10
+
+    # Boundary tags of endocardium.
+    set Tags endo      = 20
+
+    # Left ventricle Algorithm type: Bayer-Trayanova, Rossi-Lassila.
+    # Available options are: BT | RL.
+    set Algorithm type = BT
+
+    # Alpha left epicardium [°][-].
+    set alpha epi      = -60
+
+    # Alpha left endocardium [°][+].
+    set alpha endo     = 60
+
+    # Beta left epicardium [°][+].
+    set beta epi       = 20
+
+    # Beta left endocardium [°][-].
+    set beta endo      = -20
+
+
+    subsection RL
+      # Coordinates for Normal to Ventricle base.
+      set Normal to base = 0 0 1
+    end
+
+    subsection BT
+      # Coordinates for Ventricle Apex.
+      set Apex = 0 0 0.0601846
+    end
+
+  end
+
+  subsection Left ventricle complete
+    # Boundary tags of Ventricle Mitral valve ring.
+    set Tags MV       = 50
+
+    # Boundary tags of Ventricle Aortic valve ring.
+    set Tags AV       = 60
+
+    # Boundary tags of epicardium.
+    set Tags epi      = 10
+
+    # Boundary tags of endocardium.
+    set Tags endo     = 20
+
+    # Coordinates for Ventricle Apex.
+    set Apex          = 0.0692 0.0710 0.3522
+
+    # Alpha left epicardium [°][-].
+    set alpha epi     = -60
+
+    # Alpha left endocardium [°][+].
+    set alpha endo    = 60
+
+    # Beta left epicardium [°][+].
+    set beta epi      = 20
+
+    # Beta left endocardium [°][-].
+    set beta endo     = -20
+
+    # Alpha outflow track epicardium [°][-].
+    set alpha epi OT  = 0
+
+    # Alpha outflow track endocardium [°][+].
+    set alpha endo OT = 90
+
+    # Beta outflow track epicardium [°][+].
+    set beta epi OT   = 0
+
+    # Beta outflow track endocardium [°][-].
+    set beta endo OT  = 0
+  end
+
+  subsection Left atrium
+    # Left Atrium with appendage.
+    set Appendage      = true
+
+    # Coordinates for Atrium Apex Appendage.
+    set Apex           = 83.868 16.369 45.989
+
+    # Boundary tag of epicardium.
+    set Tags epi       = 30
+
+    # Boundary tag of endocardium.
+    set Tags endo      = 10
+
+    # Boundary tags of Right Pulmunary Vein ring.
+    set Tags RPV       = 20
+
+    # Boundary tags of Left Pulmunary Vein ring.
+    set Tags LPV       = 50
+
+    # Boundary tags of Mitral Valve ring.
+    set Tags MV        = 40
+
+    # Dimension of Atrioventricular Mitral Valve bundle.
+    set Tau bundle MV  = 0.60                 # default: 0.90
+
+    # Dimension of Left Pulmunary Veins bundle.
+    set Tau bundle LPV = 0.90                 # default: 0.85
+
+    # Dimension of Right Pulmunary Veins bundle.
+    set Tau bundle RPV = 0.10                 # default: 0.15
+  end
+
+  subsection Linear solver
+    set Maximum number of iterations = 1000
+    # Tolerance for the absolute l2 residual norm.
+    set Tolerance                    = 1e-10
+
+    # Reduction factor w.r.t. initial linear solver residual. If 0, then only
+    # the absolute residual norm is checked as a stopping criterion.
+    set Reduction                    = 0
+
+    # Log each iteration step, use 'Log frequency' for skipping steps.
+    set Log history                  = false
+
+    # Set logging frequency when 'Log history' is enabled.
+    set Log frequency                = 1
+
+    # Available options are: BiCGStab | CG | GMRES.
+    set Solver type                  = GMRES
+
+
+    subsection GMRES
+      # Toggle using right or left preconditioning.
+      set Right preconditioning               = true
+
+      # The number of iterations before restart.
+      set Maximum number of temporary vectors = 1000
+      set Use default residual                = true
+
+      # Force re-orthogonalization of orthonormal basis in every step; if
+      # false, the solver automatically checks for loss of orthogonality every
+      # 5 iterations.
+      set Force re-orthogonalization          = false
+    end
+
+    subsection BiCGStab
+      # Toggle using exact linear system residual or an estimate.
+      set Exact residual = true
+
+      # A threshold telling which numbers are considered zero.
+      set Breakdown      = 1e-10
+    end
+
+  end
+
+  subsection Preconditioner
+    # Determine which preconditioner to use.
+    # Available options are: AMG | BlockJacobi | AdditiveSchwarz.
+    set Preconditioner type = AMG
+
+
+    subsection AMG parameters
+      # Optimization for elliptic problem.
+      set Elliptic              = true
+
+      # Optimization for higher order elements.
+      set Higher order elements = false
+
+      # Number of multigrid cycles.
+      set N-cycles              = 1
+
+      # Use of W-cycle instead of a V-cycle.
+      set W-cycle               = false
+
+      # Dropping threshold in aggregation.
+      set Aggregation threshold = 1e-4
+
+      # Specify the constant modes of the matrix.
+      set Constant modes        = false
+
+      # Number of the sweeps of the smoother.
+      set Smoother sweeps       = 2
+
+      # Number of the overlap in the error smoother.
+      set Smoother overlap      = 0
+
+      # Determines which smoother to use for the AMG cycle.
+      # Available options are: Aztec | IFPACK | Jacobi | ML symmetric
+      # Gauss-Seidel | symmetric Gauss-Seidel | ML Gauss-Seidel | Gauss-Seidel
+      # | block Gauss-Seidel | symmetric block Gauss-Seidel | Chebyshev | MLS
+      # | Hiptmair | Amesos-KLU | Amesos-Superlu | Amesos-UMFPACK |
+      # Amesos-Superludist | Amesos-MUMPS | user-defined | SuperLU |
+      # IFPACK-Chebyshev | self | do-nothing | IC | ICT | ILU | ILUT | Block
+      # Chebyshev | IFPACK-Block Chebyshev.
+      set Smoother type         = Chebyshev
+
+      # Determines which solver to use on the coarsest level.
+      # Available options are: Aztec | IFPACK | Jacobi | ML symmetric
+      # Gauss-Seidel | symmetric Gauss-Seidel | ML Gauss-Seidel | Gauss-Seidel
+      # | block Gauss-Seidel | symmetric block Gauss-Seidel | Chebyshev | MLS
+      # | Hiptmair | Amesos-KLU | Amesos-Superlu | Amesos-UMFPACK |
+      # Amesos-Superludist | Amesos-MUMPS | user-defined | SuperLU |
+      # IFPACK-Chebyshev | self | do-nothing | IC | ICT | ILU | ILUT | Block
+      # Chebyshev | IFPACK-Block Chebyshev.
+      set Coarse type           = Amesos-KLU
+
+      # Flag to print AMG details.
+      set Output details        = false
+    end
+
+    subsection AdditiveSchwarz parameters
+      # Solver to be used on subdomains.
+      # Available options are: SOR | SSOR | BlockSOR | BlockSSOR | ILU |
+      # ILUT.
+      set Inner solver = SOR
+
+      # Overlap between subdomains.
+      set Overlap      = 0
+
+
+      subsection SOR, SSOR, BlockSOR and BlockSSOR
+        # Size of the blocks (BlockSOR and BlockSSOR only).
+        set Block size       = 1
+
+        # Over-relaxation parameter.
+        set Omega            = 1.0
+
+        # Minimum diagonal value.
+        set Min diagonal     = 0.0
+
+        # Number of sweeps per preconditioner application.
+        set Number of sweeps = 1
+      end
+
+      subsection ILU and ILUT
+        # Fill-in level.
+        set Fill               = 0
+
+        # Threshold below which values are removed from the factorization
+        # (ILUT only).
+        set Drop threshold     = 0.0
+
+        # Absolute threshold.
+        set Absolute threshold = 0.0
+
+        # Relative threshold.
+        set Relative threshold = 1.0
+      end
+
+    end
+
+  end
+
+  subsection Output
+    # Enable/disable output.
+    set Enable output = true
+
+    # Output file.
+    set Filename      = fibers
+  end
+
+end
+
+

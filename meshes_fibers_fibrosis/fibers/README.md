@@ -1,0 +1,2 @@
+# Content
+These fibers are generated with the _lifex-fiber_ package. We used the meshes already provided in the lifex_fiber_generation_examples.zip archive found [here](https://zenodo.org/records/7622070). Some of them have been refined, others removed.

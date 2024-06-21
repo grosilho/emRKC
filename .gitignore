@@ -164,7 +164,7 @@ cython_debug/
 # Folders
 build
 .vscode
-meshes_fibers_fibrosis
+meshes_fibers_fibrosis_complete
 results*
 
 # MacOS files

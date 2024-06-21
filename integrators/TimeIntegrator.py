@@ -2,17 +2,17 @@ import numpy as np
 import time
 from tqdm import tqdm
 from utils.compute_CV import compute_CV, compute_activation_times
+import logging
 
 
 class TimeIntegrator:
-    def __init__(self, problem, step, logger):
+    def __init__(self, problem, step):
         self.step = step
         self.problem = problem
-        self.logger = logger
 
     def solve(self, dt, o_freq):
         problem = self.problem
-        log_stat = self.logger["log_stat"]
+        log_stat = logging.getLogger("stat")
 
         u_n = problem.initial_value()
         if o_freq > 0:
@@ -45,7 +45,9 @@ class TimeIntegrator:
             t_vals[curr_checkpoint] = t
             u_vals[:, curr_checkpoint] = problem.eval_on_points(u_n).reshape((n_pts,))
 
-        if self.logger["show_bar"]:
+        show_bar = logging.getLogger("step").getEffectiveLevel() == logging.WARNING
+
+        if show_bar:
             pbar = tqdm(total=int((Tend - t) / dt))
 
         tic = time.perf_counter()
@@ -67,13 +69,13 @@ class TimeIntegrator:
                 problem.write_solution(u_n, t)
 
             n += 1
-            if self.logger["show_bar"]:
+            if show_bar:
                 pbar.update(1)
 
         toc = time.perf_counter()
         cpu_time = toc - tic
 
-        if self.logger["show_bar"]:
+        if show_bar:
             pbar.close()
 
         if eval_CV:

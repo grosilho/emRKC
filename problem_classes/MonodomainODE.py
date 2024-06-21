@@ -7,13 +7,11 @@ import problem_classes.ionicmodels.cpp as ionicmodels
 
 class MonodomainODE:
     def __init__(self, **problem_params):
-        self.logger = logging.getLogger("step")
+        self.logger = logging.getLogger("space")
 
         # the class for the spatial discretization of the parabolic part of monodomain
         if problem_params['space_disc'] == "FEM":
             from problem_classes.space_discretizazions.Parabolic_FEniCSx import Parabolic_FEniCSx as Parabolic
-        elif problem_params['space_disc'] == "FD":
-            from problem_classes.space_discretizazions.Parabolic_FD import Parabolic_FD as Parabolic
         elif problem_params['space_disc'] == "DCT":
             from problem_classes.space_discretizazions.Parabolic_DCT import Parabolic_DCT as Parabolic
 
@@ -31,7 +29,7 @@ class MonodomainODE:
 
         # initial and end time
         self.t0 = 0.0
-        self.Tend = 50.0 if self.end_time <= 0.0 else self.end_time
+        self.Tend = self.end_time
 
         # dtype_u and dtype_f are super vectors of vector_type
         self.vector_type = self.parabolic.vector_type
@@ -49,7 +47,7 @@ class MonodomainODE:
 
         # init output stuff
         self.output_folder = (
-            Path(self.output_root)
+            self.output_root
             / Path(self.parabolic.domain_name)
             / Path(self.parabolic.mesh_name)
             / Path(self.ionic_model_name)
@@ -98,7 +96,7 @@ class MonodomainODE:
         if read_ok:
             error_L2, rel_error_L2 = self.parabolic.compute_errors(uh[0], ref_sol_V)
 
-            if not hasattr(self.parabolic, "comm") or self.parabolic.rank == 0:
+            if not hasattr(self.parabolic, "comm") or self.parabolic.comm.rank == 0:
                 print(f"L2-errors: {error_L2}")
                 print(f"Relative L2-errors: {rel_error_L2}")
 
@@ -154,16 +152,21 @@ class MonodomainODE:
                 centers = [[0.0, 50.0, 50.0], [58.5, 0.0, 50.0]]
                 self.stim_centers = [centers[i] for i in range(len(self.stim_protocol))]
                 self.stim_radii = [[1.0, 50.0, 50.0], [1.5, 60.0, 50.0]]
-            elif "03_fastl_LA" == self.parabolic.domain_name:
+            else:
                 stim_dur = 4.0
                 stim_interval = [0, 280, 170, 160, 155, 150, 145, 140, 135, 130, 126, 124, 124, 124, 124]
                 stim_times = np.cumsum(stim_interval)
                 self.stim_protocol = [[stim_time, stim_dur] for stim_time in stim_times]
                 self.stim_intensities = [80.0] * len(self.stim_protocol)
-                centers = [[29.7377, 17.648, 45.8272], [60.5251, 27.9437, 41.0176]]
-                self.stim_centers = [centers[i % 2] for i in range(len(self.stim_protocol))]
                 r = 5.0
                 self.stim_radii = [[r, r, r]] * len(self.stim_protocol)
+                if "01_strocchi_LA" == self.parabolic.domain_name:
+                    centers = [[38.5268, 125.124, 415.613], [40.3184, 153.451, 348.505]]
+                elif "03_fastl_LA" == self.parabolic.domain_name:
+                    centers = [[29.7377, 17.648, 45.8272], [60.5251, 27.9437, 41.0176]]
+                elif "idealized_LV" == self.parabolic.domain_name:
+                    centers = [[15.9168, 36.3052, 7.6450], [22.6039, -32.6384, 6.8979]]
+                self.stim_centers = [centers[i % 2] for i in range(len(self.stim_protocol))]
 
             self.stim_protocol = np.array(self.stim_protocol)
 
