@@ -1,5 +1,7 @@
 # emRKC
-A Python implementation of the exponential multirate Runge-Kutta-Chebychev (emRKC) method with applications to the monodomain model in cardiac electrophysiology. This code has been developed and used to produce the numerical results in [[1]](#1).
+A Python implementation of the exponential multirate Runge-Kutta-Chebychev (emRKC) method with applications to the monodomain model in cardiac electrophysiology. This code has been developed and used to produce the numerical results in
+
+> Rosilho De Souza, G. R., Grote, M. J., Pezzuto, S., & Krause, R. (2024). Explicit stabilized multirate methods for the monodomain model in cardiac electrophysiology. ESAIM: Mathematical Modelling and Numerical Analysis (in press). [http://arxiv.org/abs/2401.01745](http://arxiv.org/abs/2401.01745)
 
 
 ## The numerical scheme
@@ -15,7 +17,7 @@ is a very stiff term where $\Lambda$ is a matrix and $y_\infty$ a general nonlin
 A particular and important application case reducing to such ODE is the semi-discrete monodomain equation, where $f_F$ represents the spatially discretized Laplacian, $f_E$ the ionic model's gating variables and $f_S$ all remaining terms.
 
 ### Method
-emRKC is an extension of the multirate Runge-Kutta-Chebychev (mRKC) method [[2]](#2) where the terms $f_F$ and $f_S$ are integrated exactly as in mRKC and the $f_E$ term is integrated exponentially. Hence, as mRKC, also emRKK solves a modified equation.
+emRKC is an extension of the multirate Runge-Kutta-Chebychev (mRKC) method[^mrkc] [^mrkccode] where the terms $f_F$ and $f_S$ are integrated exactly as in mRKC and the $f_E$ term is integrated exponentially. Hence, as mRKC, also emRKK solves a modified equation.
 
 **The modified equation.**
 More specifically, emRKC can be seen as a Runge-Kutta-Chebyshev (RKC) method applied to the modified equation
@@ -31,11 +33,6 @@ and finally evaluating
 $$f_\eta(y_\eta)=\frac{1}{\eta}(u(\eta)-y_\eta).$$
 Note that $y_E$ is computed with an exponential Euler step and, in practice, the auxiliary problem is solved using an RKC method. The value of $\eta>0$ depends on the stiffness of $f_S$ and in general satisfies $\eta\ll\Delta t$, with $\Delta t$ the step size used to solve the modified equation $y_\eta'=f_\eta(t,y_\eta)$.
 Since the expensive term $f_S$ is frozen, solving the auxiliary problem is comparable to evaluating $f_F+f_S+f_E$.
-
-### References
-<a id="1">[1]</a> Rosilho De Souza, G. R., Grote, M. J., Pezzuto, S., & Krause, R. (2024). Explicit stabilized multirate methods for the monodomain model in cardiac electrophysiology. ESAIM: Mathematical Modelling and Numerical Analysis (in press). [http://arxiv.org/abs/2401.01745](http://arxiv.org/abs/2401.01745)
-
-<a id="2">[2]</a> Abdulle, A., Grote, M. J., & Rosilho de Souza, G. (2022). Explicit stabilized multirate method for stiff differential equations. Mathematics of Computation, 91(338), 2681–2714. [https://doi.org/10.1090/mcom/3753](https://doi.org/10.1090/mcom/3753)
 
 ## The code
 The code implements the emRKC, mRKC and the baseline IMEX Rush-Larsen method. As spatial discretization we offer finite differences evaluated with discrete cosine transforms (DCT) and the finite element method (FEM). For FEM we employ the [FEniCSx](https://fenicsproject.org/) package. 
@@ -80,6 +77,10 @@ docker run --rm -ti -v "$(pwd)":/src emrkc mpirun -n 4 python3 Solve_Monodomain.
 Results are visualized with Paraview.
 
 ---
+
+[^mrkc]: Abdulle, A., Grote, M. J., & Rosilho de Souza, G. (2022). Explicit stabilized multirate method for stiff differential equations. Mathematics of Computation, 91(338), 2681–2714. [https://doi.org/10.1090/mcom/3753](https://doi.org/10.1090/mcom/3753)
+
+[^mrkccode]: Rosilho De Souza, G. (2022). mRKC: a multirate Runge—Kutta—Chebyshev code. [https://github.com/grosilho/mRKC](https://github.com/grosilho/mRKC)
 
 [^imexrl]: Lindner, L. P., Gerach, T., Jahnke, T., Loewe, A., Weiss, D., & Wieners, C. (2023). Efficient time splitting schemes for the monodomain equation in cardiac electrophysiology. International Journal for Numerical Methods in Biomedical Engineering, 39(2), e3666. [https://doi.org/10.1002/cnm.3666](https://doi.org/10.1002/cnm.3666)
 
