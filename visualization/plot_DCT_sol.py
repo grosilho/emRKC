@@ -7,7 +7,7 @@ import os
 
 executed_file_dir = os.path.dirname(os.path.realpath(__file__))
 output_root = executed_file_dir + "/../results/"
-domain_name = "cuboid_2D_very_small"
+domain_name = "cuboid_2D_small"
 refinements = 2
 ionic_model = "TTP"
 file_name = "monodomain"

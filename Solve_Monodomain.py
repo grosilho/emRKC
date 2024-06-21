@@ -3,10 +3,6 @@ import argparse
 import os
 from pathlib import Path
 
-import sys
-
-sys.path.insert(0, '..')
-
 from utils.data_management import database
 
 from problem_classes.MonodomainODE import MonodomainODE, MultiscaleMonodomainODE
@@ -30,7 +26,7 @@ def get_default_problem_params():
     problem_params["post_refinements"] = 0
     problem_params["fibrosis"] = False
     executed_file_dir = Path(os.path.dirname(os.path.realpath(__file__)))
-    problem_params["meshes_fibers_fibrosis_folder"] = executed_file_dir / Path("../meshes_fibers_fibrosis")
+    problem_params["meshes_fibers_fibrosis_folder"] = executed_file_dir / Path("meshes_fibers_fibrosis")
     problem_params["domain_name"] = "cuboid_2D_small"
     problem_params["init_time"] = 0.0
     problem_params["end_time"] = 50.0
@@ -254,7 +250,7 @@ def main():
     args = vars(parser.parse_args())
 
     executed_file_dir = Path(os.path.dirname(os.path.realpath(__file__)))
-    args["output_root"] = executed_file_dir / Path("../" + args["output_root"])
+    args["output_root"] = executed_file_dir / Path(args["output_root"])
 
     problem_params = modify_params(problem_params, args)
     int_params = modify_params(int_params, args)
